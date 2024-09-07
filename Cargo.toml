@@ -1,0 +1,26 @@
+[package]
+name = "paycheck"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+no-entrypoint = []
+test-sbf = []
+
+[dependencies]
+borsh = { version = "1.5.1", features = ["derive"] }
+serde = { version = "1.0.209", features = ["derive"] }
+solana-program = "2.0.8"
+spl-token = { version = "6.0.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "5.0.0", features = ["no-entrypoint"]}
+bytemuck = { version = "1.18.0", features = ["derive"] }
+thiserror = "1.0.63"
+num-traits = "0.2.19"
+
+[dev-dependencies]
+solana-program-test = "2.0.8"
+solana-sdk= "2.0.8"
+termcolor = "=1.4.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
