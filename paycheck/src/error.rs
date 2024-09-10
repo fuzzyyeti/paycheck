@@ -23,10 +23,10 @@ impl PrintProgramError for PaycheckProgramError {
     fn print<E>(&self)
     where
         E: 'static
-        + std::error::Error
-        + DecodeError<E>
-        + PrintProgramError
-        + num_traits::FromPrimitive,
+            + std::error::Error
+            + DecodeError<E>
+            + PrintProgramError
+            + num_traits::FromPrimitive,
     {
         match self {
             PaycheckProgramError::InvalidInstructionData => msg!("Error: Invalid instruction"),

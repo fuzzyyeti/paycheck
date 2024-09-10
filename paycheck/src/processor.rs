@@ -1,9 +1,9 @@
+use crate::instructions::create_paycheck::{process_create_paycheck, CreatePaycheckArgs};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::pubkey::Pubkey;
-use crate::instructions::create_paycheck::{process_create_paycheck, CreatePaycheckArgs};
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum PaycheckInstructions {
@@ -14,7 +14,6 @@ pub enum PaycheckInstructions {
     ClosePaycheck,
     ActivatePaycheck,
 }
-
 
 pub fn process_instruction(
     program_id: &Pubkey,
