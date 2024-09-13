@@ -1,0 +1,11 @@
+[package]
+name = "whirlpools-state"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+borsh = { version = "1.5.1", features = ["derive"] }
+solana-program = "2.0.8"
+
+[dev-dependencies]
+termcolor = "=1.4.0"

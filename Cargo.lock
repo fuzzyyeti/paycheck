@@ -2439,6 +2439,7 @@ dependencies = [
  "spl-token",
  "termcolor",
  "thiserror",
+ "whirlpools-state",
 ]
 
 [[package]]
@@ -5860,6 +5861,15 @@ dependencies = [
  "home",
  "once_cell",
  "rustix",
+]
+
+[[package]]
+name = "whirlpools-state"
+version = "0.1.0"
+dependencies = [
+ "borsh 1.5.1",
+ "solana-program",
+ "termcolor",
 ]
 
 [[package]]

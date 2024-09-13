@@ -4,15 +4,12 @@ use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::pubkey::Pubkey;
+use crate::instructions::process_execute_paycheck;
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum PaycheckInstructions {
-    CreateConfig(CreatePaycheckArgs),
-    UpdateConfig,
-    CreatePaycheck,
-    EditPaycheck,
-    ClosePaycheck,
-    ActivatePaycheck,
+    CreatePaycheck(CreatePaycheckArgs),
+    ExecutePaycheck,
 }
 
 pub fn process_instruction(
@@ -22,24 +19,11 @@ pub fn process_instruction(
 ) -> ProgramResult {
     let instruction = PaycheckInstructions::try_from_slice(instruction_data);
     match instruction {
-        Ok(PaycheckInstructions::CreateConfig(config_args)) => {
-            msg!("Got in here, {:?}", config_args);
-            process_create_paycheck(program_id, accounts, config_args)?;
+        Ok(PaycheckInstructions::CreatePaycheck(create_paycheck_args)) => {
+            process_create_paycheck(program_id, accounts, create_paycheck_args)?;
         }
-        Ok(PaycheckInstructions::UpdateConfig) => {
-            msg!("UpdateConfig");
-        }
-        Ok(PaycheckInstructions::CreatePaycheck) => {
-            msg!("CreatePaycheck");
-        }
-        Ok(PaycheckInstructions::EditPaycheck) => {
-            msg!("EditPaycheck");
-        }
-        Ok(PaycheckInstructions::ClosePaycheck) => {
-            msg!("ClosePaycheck");
-        }
-        Ok(PaycheckInstructions::ActivatePaycheck) => {
-            msg!("ActivatePaycheck");
+        Ok(PaycheckInstructions::ExecutePaycheck) => {
+            process_execute_paycheck(program_id, accounts)?;
         }
         Err(e) => {
             msg!("Error: {:?}", e);

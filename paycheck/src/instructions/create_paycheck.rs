@@ -11,9 +11,8 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
-use solana_program::{system_instruction};
-
-const PAYCHECK_SEED: &[u8] = b"paycheck";
+use solana_program::system_instruction;
+use crate::consts::PAYCHECK_SEED;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct CreatePaycheckArgs {
@@ -32,7 +31,9 @@ pub fn process_create_paycheck(
     let account_info_iter = &mut accounts.iter();
     let creator = next_account_info(account_info_iter)?;
     let paycheck_account = next_account_info(account_info_iter)?;
+
     assert_signer(creator)?;
+
     let bump = assert_derivation(
         program_id,
         paycheck_account,
@@ -45,6 +46,8 @@ pub fn process_create_paycheck(
     )?;
     let rent = Rent::get()?;
     let required_lamports = rent.minimum_balance(Paycheck::LEN);
+
+    // Create the Paycheck account
     invoke_signed(
         &system_instruction::create_account(
             creator.key,
@@ -61,6 +64,8 @@ pub fn process_create_paycheck(
             &[bump],
         ]],
     )?;
+
+    // Initialize the Paycheck account data
     let mut config_account = paycheck_account.try_borrow_mut_data()?;
     let mut paycheck_account_data = Paycheck::try_from_slice(&config_account)?;
     paycheck_account_data.receiver = config_args.receiver;
@@ -81,7 +86,7 @@ pub fn create_paycheck_ix(
     creator: Pubkey,
     config_args: CreatePaycheckArgs,
 ) -> Result<Instruction, PaycheckProgramError> {
-    let data = borsh::to_vec(&PaycheckInstructions::CreateConfig(config_args.clone()))
+    let data = borsh::to_vec(&PaycheckInstructions::CreatePaycheck(config_args.clone()))
         .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
     let paycheck_account = Pubkey::find_program_address(
         &[

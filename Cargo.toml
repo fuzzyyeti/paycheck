@@ -2,5 +2,5 @@
 members = [
     "mpl-macros",
     "paycheck"
-]
+, "whirlpools-state"]
 resolver = "2"
