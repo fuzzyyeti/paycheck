@@ -7,6 +7,7 @@ use solana_program_test::{processor, tokio, ProgramTest};
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use std::str::FromStr;
+use solana_program::pubkey;
 
 static PROGRAM_ID: Lazy<Pubkey> =
     Lazy::new(|| Pubkey::from_str("54oykPNNXxpXihbuU5H6j3MZmqCxaAdHALDvVYfzwnW4").unwrap());
@@ -15,11 +16,42 @@ static PROGRAM_ID: Lazy<Pubkey> =
 async fn test_create_paycheck() {
     let program_id = *PROGRAM_ID;
     println!("program_id: {:?}", program_id);
-    let program_test = ProgramTest::new(
+    let mut program_test = ProgramTest::new(
         "paycheck",
         *PROGRAM_ID,
         processor!(paycheck::processor::process_instruction),
     );
+    program_test.add_program("whirlpool_program", whirlpools_state::ID, None);
+    program_test.add_account_with_file_data(
+        pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP"),
+        5435760,
+        pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"),
+        "./tests/data/whirlpool.bin");
+    program_test.add_account_with_file_data(
+        pubkey!("CnnLoEyGjS1Bwhnc5fCHHoU6fLQ7zfxp7UAqgoBX27QL"),
+        2039280,
+        pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+    "./tests/data/token_vault_a.bin");
+    program_test.add_account_with_file_data(
+        pubkey!("FAehFHnQqqP6Mq9yY6ofFKPFDdz1K5dK2FsrTTf3o4Gq"),
+        2039280,
+        pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+    "./tests/data/token_vault_b.bin");
+    program_test.add_account_with_file_data(
+        pubkey!("BMGf4rTHvJsXiGPqur4NcEqT4iizBu8kqAvREae5VLXt"),
+        70407360,
+        pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"),
+        "./tests/data/tick_array_0.bin");
+    program_test.add_account_with_file_data(
+        pubkey!("4F2Hn2R9guCefV9jdXqkUKd2WhtLPVH2dWr2wF3mQceh"),
+        70407360,
+        pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"),
+        "./tests/data/tick_array_1.bin");
+    program_test.add_account_with_file_data(
+        pubkey!("G3JXJabcbA6dHNDVkrrP88v5L8jkW5SE3CrU3fNiZ5LH"),
+        70407360,
+        pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"),
+        "./tests/data/tick_array_2.bin");
     let (mut banks_client, payer, recent_blockhash) = program_test.start().await;
     let args = CreatePaycheckArgs {
         receiver: Pubkey::default(),
