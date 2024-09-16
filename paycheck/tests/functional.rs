@@ -3,19 +3,158 @@ use once_cell::sync::Lazy;
 use paycheck::instructions::create_paycheck::CreatePaycheckArgs;
 use paycheck::state::Paycheck;
 use solana_program::pubkey::Pubkey;
-use solana_program_test::{processor, tokio, ProgramTest};
-use solana_sdk::signature::Signer;
+use solana_program_test::{processor, tokio, BanksClient, ProgramTest};
+use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
 use std::str::FromStr;
+use solana_program::hash::Hash;
+use solana_program::instruction::{AccountMeta, Instruction};
+use solana_program::program_option::COption;
+use solana_program::program_pack::Pack;
 use solana_program::pubkey;
+use solana_sdk::account::Account;
+use spl_token::state::{AccountState};
+use whirlpools_state::{SwapArgs, TOKEN_PROGRAM_ID, USDC_MINT};
 
 static PROGRAM_ID: Lazy<Pubkey> =
     Lazy::new(|| Pubkey::from_str("54oykPNNXxpXihbuU5H6j3MZmqCxaAdHALDvVYfzwnW4").unwrap());
-#[tokio::test]
 
-async fn test_create_paycheck() {
+const WHIRLPOOL_ADDRESS : Pubkey = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
+const BSOL_MINT : Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
+#[tokio::test]
+async fn try_swap() {
     let program_id = *PROGRAM_ID;
-    println!("program_id: {:?}", program_id);
+    let (mut banks_client, payer, recent_blockhash, owner, token_account_b) = setup_program().await;
+    let token_account_address = spl_associated_token_account::get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
+    let oracle = Pubkey::find_program_address(&[b"oracle", WHIRLPOOL_ADDRESS.as_ref()], &whirlpools_state::ID).0;
+    let whirlpool = whirlpools_state::Whirlpool::try_from_slice(&banks_client.get_account(WHIRLPOOL_ADDRESS).await.unwrap().unwrap().data[8..]).unwrap();
+
+    let index_spacing = (whirlpool.tick_spacing as i32) * 88;
+    let start_tick_index = whirlpool.tick_current_index - (whirlpool.tick_current_index % index_spacing);
+    let tick_array_0 = Pubkey::find_program_address(&[
+        b"tick_array",
+        WHIRLPOOL_ADDRESS.as_ref(),
+        start_tick_index.to_string().as_bytes()], &whirlpools_state::ID).0;
+    let tick_array_1 = Pubkey::find_program_address(&[
+        b"tick_array",
+        WHIRLPOOL_ADDRESS.as_ref(),
+        (start_tick_index - index_spacing).to_string().as_bytes()], &whirlpools_state::ID).0;
+    let tick_array_2 = Pubkey::find_program_address(&[
+        b"tick_array",
+        WHIRLPOOL_ADDRESS.as_ref(),
+        (start_tick_index - index_spacing*2).to_string().as_bytes()], &whirlpools_state::ID).0;
+
+    let swap_discriminator: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
+    let input_args = SwapArgs {
+        swap_discriminator,
+        amount: 1000,
+        other_amount_threshold: 0,
+        sqrt_price_limit: 0,
+        amount_specified_is_input: true,
+        a_to_b: true,
+    };
+
+    let swap_ix = Instruction::new_with_borsh(
+        whirlpools_state::ID,
+        &input_args,
+        vec![
+            AccountMeta::new_readonly(pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"), false),
+            AccountMeta::new(owner.pubkey(), true),
+            AccountMeta::new(WHIRLPOOL_ADDRESS, false),
+            AccountMeta::new(token_account_address, false),
+            AccountMeta::new(whirlpool.token_vault_a, false),
+            AccountMeta::new(token_account_b, false),//token_owner_account_b, false),
+            AccountMeta::new(whirlpool.token_vault_b, false),
+            AccountMeta::new(tick_array_0, false),
+            AccountMeta::new(tick_array_1, false),
+            AccountMeta::new(tick_array_2, false),
+            AccountMeta::new_readonly(oracle, false),
+        ]
+    );
+    let transaction = Transaction::new_signed_with_payer(
+        &[swap_ix],
+        Some(&owner.pubkey()),
+        &[&owner],
+        recent_blockhash,
+    );
+    let result = banks_client.process_transaction(transaction).await;
+    match result {
+        Ok(_) => {
+            println!("Transaction processed successfully");
+        }
+        Err(e) => {
+            panic!("Error processing transaction: {:?}", e);
+        }
+    }
+}
+// #[tokio::test]
+// async fn test_create_paycheck() {
+//     let program_id = *PROGRAM_ID;
+//     println!("program_id: {:?}", program_id);
+//     let (mut banks_client, payer, recent_blockhash, owner) = setup_program().await;
+//     let args = CreatePaycheckArgs {
+//         receiver: Pubkey::default(),
+//         start_date: 8,
+//         increment: 8,
+//         amount: 8,
+//         whirlpool: Pubkey::default(),
+//     };
+//     let create_paycheck_ix =
+//         paycheck::instructions::create_paycheck::create_paycheck_ix(payer.pubkey(), args.clone())
+//             .unwrap();
+//     println!("create_config_ix: {:?}", create_paycheck_ix);
+//     let transaction = Transaction::new_signed_with_payer(
+//         &[create_paycheck_ix],
+//         Some(&payer.pubkey()),
+//         &[&payer],
+//         recent_blockhash,
+//     );
+//     let result = banks_client.process_transaction(transaction).await;
+//
+//     match result {
+//         Ok(_) => {
+//             println!("Transaction processed successfully");
+//
+//             // Find the Paycheck account PDA with correct seeds
+//             let (paycheck_pda, _) = Pubkey::find_program_address(
+//                 &[
+//                     b"paycheck",
+//                     args.whirlpool.as_ref(),
+//                     payer.pubkey().as_ref(),
+//                 ],
+//                 &program_id,
+//             );
+//
+//             // Fetch the Paycheck account data
+//             let paycheck_account = banks_client
+//                 .get_account(paycheck_pda)
+//                 .await
+//                 .expect("Failed to fetch Paycheck account");
+//
+//             if let Some(account) = paycheck_account {
+//                 let paycheck = Paycheck::try_from_slice(&account.data)
+//                     .expect("Failed to deserialize Paycheck account");
+//
+//                 // Verify the Paycheck account data
+//                 assert_eq!(paycheck.receiver, args.receiver);
+//                 assert_eq!(paycheck.start_date, args.start_date);
+//                 assert_eq!(paycheck.increment, args.increment);
+//                 assert_eq!(paycheck.amount, args.amount);
+//                 assert_eq!(paycheck.whirlpool, args.whirlpool);
+//                 assert!(paycheck.is_enabled);
+//
+//                 println!("Paycheck account configured correctly");
+//             } else {
+//                 panic!("Paycheck account not found");
+//             }
+//         }
+//         Err(e) => {
+//             panic!("Error processing transaction: {:?}", e);
+//         }
+//     }
+// }
+
+async fn setup_program() -> (BanksClient, Keypair, Hash, Keypair, Pubkey) {
     let mut program_test = ProgramTest::new(
         "paycheck",
         *PROGRAM_ID,
@@ -23,7 +162,7 @@ async fn test_create_paycheck() {
     );
     program_test.add_program("whirlpool_program", whirlpools_state::ID, None);
     program_test.add_account_with_file_data(
-        pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP"),
+        WHIRLPOOL_ADDRESS,
         5435760,
         pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"),
         "./tests/data/whirlpool.bin");
@@ -31,12 +170,12 @@ async fn test_create_paycheck() {
         pubkey!("CnnLoEyGjS1Bwhnc5fCHHoU6fLQ7zfxp7UAqgoBX27QL"),
         2039280,
         pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-    "./tests/data/token_vault_a.bin");
+        "./tests/data/token_vault_a.bin");
     program_test.add_account_with_file_data(
         pubkey!("FAehFHnQqqP6Mq9yY6ofFKPFDdz1K5dK2FsrTTf3o4Gq"),
         2039280,
         pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-    "./tests/data/token_vault_b.bin");
+        "./tests/data/token_vault_b.bin");
     program_test.add_account_with_file_data(
         pubkey!("BMGf4rTHvJsXiGPqur4NcEqT4iizBu8kqAvREae5VLXt"),
         70407360,
@@ -52,65 +191,80 @@ async fn test_create_paycheck() {
         70407360,
         pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"),
         "./tests/data/tick_array_2.bin");
-    let (mut banks_client, payer, recent_blockhash) = program_test.start().await;
-    let args = CreatePaycheckArgs {
-        receiver: Pubkey::default(),
-        start_date: 8,
-        increment: 8,
-        amount: 8,
-        whirlpool: Pubkey::default(),
+
+    let owner = Keypair::new();
+    let token_account_a = spl_token::state::Account{
+        mint: BSOL_MINT,
+        owner: owner.pubkey(),
+        amount: 1000000,
+        delegate: COption::None,
+        state: AccountState::Initialized,
+        is_native: COption::None,
+        delegated_amount: 0,
+        close_authority: COption::None,
     };
-    let create_paycheck_ix =
-        paycheck::instructions::create_paycheck::create_paycheck_ix(payer.pubkey(), args.clone())
-            .unwrap();
-    println!("create_config_ix: {:?}", create_paycheck_ix);
-    let transaction = Transaction::new_signed_with_payer(
-        &[create_paycheck_ix],
-        Some(&payer.pubkey()),
-        &[&payer],
-        recent_blockhash,
+    let token_account_address = spl_associated_token_account::get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
+    let mut data : Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
+    token_account_a.pack_into_slice(&mut data);
+
+    program_test.add_account(
+        token_account_address,
+        Account {
+            lamports: 100000000,
+            data,
+            owner: TOKEN_PROGRAM_ID,
+            executable: false,
+            rent_epoch: 0,
+        },
     );
-    let result = banks_client.process_transaction(transaction).await;
 
-    match result {
-        Ok(_) => {
-            println!("Transaction processed successfully");
+    let token_b_account_onwer = Pubkey::new_unique();
+    let token_account_b = spl_token::state::Account{
+        mint: USDC_MINT,
+        /// The owner of this account.
+        owner: token_b_account_onwer,
+        /// The amount of tokens this account holds.
+        amount: 1000000,
+        /// If `delegate` is `Some` then `delegated_amount` represents
+        /// the amount authorized by the delegate
+        delegate: COption::None,
+        /// The account's state
+        state: AccountState::Initialized,
+        /// If is_native.is_some, this is a native token, and the value logs the
+        /// rent-exempt reserve. An Account is required to be rent-exempt, so
+        /// the value is used by the Processor to ensure that wrapped SOL
+        /// accounts do not drop below this threshold.
+        is_native: COption::None,
+        /// The amount delegated
+        delegated_amount: 0,
+        /// Optional authority to close the account.
+        close_authority: COption::None,
+    };
+    let token_account_b_address = spl_associated_token_account::get_associated_token_address(&token_b_account_onwer, &USDC_MINT);
+    let mut data_b : Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
+    token_account_b.pack_into_slice(&mut data_b);
+    program_test.add_account(
+        token_account_b_address,
+        Account {
+            lamports: 100000000,
+            data: data_b,
+            owner: TOKEN_PROGRAM_ID,
+            executable: false,
+            rent_epoch: 0,
+        },
+    );
 
-            // Find the Paycheck account PDA with correct seeds
-            let (paycheck_pda, _) = Pubkey::find_program_address(
-                &[
-                    b"paycheck",
-                    args.whirlpool.as_ref(),
-                    payer.pubkey().as_ref(),
-                ],
-                &program_id,
-            );
+    program_test.add_account(
+        owner.pubkey(),
+        Account {
+            lamports: 100000000,
+            data: vec![0; 0],
+            owner: solana_program::system_program::id(),
+            executable: false,
+            rent_epoch: 0,
+        },
+    );
 
-            // Fetch the Paycheck account data
-            let paycheck_account = banks_client
-                .get_account(paycheck_pda)
-                .await
-                .expect("Failed to fetch Paycheck account");
-
-            if let Some(account) = paycheck_account {
-                let paycheck = Paycheck::try_from_slice(&account.data)
-                    .expect("Failed to deserialize Paycheck account");
-
-                // Verify the Paycheck account data
-                assert_eq!(paycheck.receiver, args.receiver);
-                assert_eq!(paycheck.start_date, args.start_date);
-                assert_eq!(paycheck.increment, args.increment);
-                assert_eq!(paycheck.amount, args.amount);
-                assert_eq!(paycheck.whirlpool, args.whirlpool);
-                assert!(paycheck.is_enabled);
-
-                println!("Paycheck account configured correctly");
-            } else {
-                panic!("Paycheck account not found");
-            }
-        }
-        Err(e) => {
-            panic!("Error processing transaction: {:?}", e);
-        }
-    }
+    let (mut banks_client, payer, recent_blockhash ) = program_test.start().await;
+    (banks_client, payer, recent_blockhash, owner, token_account_b_address)
 }

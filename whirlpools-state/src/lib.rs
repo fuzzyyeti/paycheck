@@ -6,6 +6,8 @@ use solana_program::pubkey::Pubkey;
 pub const ID: Pubkey = pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc");
 pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
+pub const TOKEN_PROGRAM_ID: Pubkey = pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+
 #[derive(BorshDeserialize, Debug)]
 pub struct Whirlpool {
     pub whirlpools_config: Pubkey, // 32
@@ -66,12 +68,12 @@ pub struct WhirlpoolRewardInfo {
 
 #[derive(BorshSerialize, Debug)]
 pub struct SwapArgs {
-    swap_discriminator: [u8; 8],
-    amount: u64,
-    other_amount_threshold: u64,
-    sqrt_price_limit: u128,
-    amount_specified_is_input: bool,
-    a_to_b: bool,
+    pub swap_discriminator: [u8; 8],
+    pub amount: u64,
+    pub other_amount_threshold: u64,
+    pub sqrt_price_limit: u128,
+    pub amount_specified_is_input: bool,
+    pub a_to_b: bool,
 }
 
 pub fn is_a_to_b(mint: &Pubkey, mint_b: &Pubkey) -> bool {
