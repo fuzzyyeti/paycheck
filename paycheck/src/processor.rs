@@ -1,15 +1,15 @@
 use crate::instructions::create_paycheck::{process_create_paycheck, CreatePaycheckArgs};
+use crate::instructions::{process_execute_paycheck, ExecutePaycheckArgs};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::pubkey::Pubkey;
-use crate::instructions::process_execute_paycheck;
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub enum PaycheckInstructions {
     CreatePaycheck(CreatePaycheckArgs),
-    ExecutePaycheck,
+    ExecutePaycheck(ExecutePaycheckArgs),
 }
 
 pub fn process_instruction(
@@ -22,8 +22,8 @@ pub fn process_instruction(
         Ok(PaycheckInstructions::CreatePaycheck(create_paycheck_args)) => {
             process_create_paycheck(program_id, accounts, create_paycheck_args)?;
         }
-        Ok(PaycheckInstructions::ExecutePaycheck) => {
-            process_execute_paycheck(program_id, accounts)?;
+        Ok(PaycheckInstructions::ExecutePaycheck(execute_paycheck_args)) => {
+            process_execute_paycheck(program_id, accounts, execute_paycheck_args)?;
         }
         Err(e) => {
             msg!("Error: {:?}", e);

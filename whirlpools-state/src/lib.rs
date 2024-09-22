@@ -10,6 +10,7 @@ pub const TOKEN_PROGRAM_ID: Pubkey = pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9S
 
 #[derive(BorshDeserialize, Debug)]
 pub struct Whirlpool {
+    pub discriminator: [u8; 8],
     pub whirlpools_config: Pubkey, // 32
     pub whirlpool_bump: [u8; 1],   // 1
 

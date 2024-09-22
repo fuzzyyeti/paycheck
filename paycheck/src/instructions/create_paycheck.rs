@@ -1,3 +1,4 @@
+use crate::consts::PAYCHECK_SEED;
 use crate::error::PaycheckProgramError;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
@@ -10,9 +11,8 @@ use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::sysvar::Sysvar;
 use solana_program::system_instruction;
-use crate::consts::PAYCHECK_SEED;
+use solana_program::sysvar::Sysvar;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct CreatePaycheckArgs {
@@ -20,6 +20,8 @@ pub struct CreatePaycheckArgs {
     pub start_date: u64,
     pub increment: u64,
     pub amount: u64,
+    pub target_mint: Pubkey,
+    pub tip: u64,
     pub whirlpool: Pubkey,
 }
 
@@ -74,6 +76,8 @@ pub fn process_create_paycheck(
     paycheck_account_data.amount = config_args.amount;
     paycheck_account_data.whirlpool = config_args.whirlpool;
     paycheck_account_data.is_enabled = true;
+    paycheck_account_data.target_mint = config_args.target_mint;
+    paycheck_account_data.tip = config_args.tip;
     paycheck_account_data.bump = bump;
 
     // Save the updated data back to the account
