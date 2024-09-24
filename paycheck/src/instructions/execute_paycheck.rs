@@ -1,4 +1,4 @@
-use crate::consts::PAYCHECK_SEED;
+use crate::consts::{MEMO_PROGRAM_ID, PAYCHECK_SEED, SWAP_DISCRIMINATOR};
 use crate::error::PaycheckProgramError;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
@@ -6,7 +6,6 @@ use crate::ID;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::{next_account_info, AccountInfo};
 use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::msg;
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
@@ -26,24 +25,27 @@ pub fn process_execute_paycheck(
     accounts: &[AccountInfo],
     args: ExecutePaycheckArgs,
 ) -> Result<(), ProgramError> {
+
     let account_info_iter = &mut accounts.iter();
     let payer = next_account_info(account_info_iter)?;
-    let paycheck_account = next_account_info(account_info_iter)?;
+    let paycheck = next_account_info(account_info_iter)?;
     let whirlpool = next_account_info(account_info_iter)?;
-    let target_mint = next_account_info(account_info_iter)?;
-    let creator_ata = next_account_info(account_info_iter)?;
-    let token_vault_a = next_account_info(account_info_iter)?;
-    let receiver_ata = next_account_info(account_info_iter)?;
-    let payer_ata = next_account_info(account_info_iter)?;
+    let treasury_mint = next_account_info(account_info_iter)?;
+    let treasury_token_account = next_account_info(account_info_iter)?;
+    let treasury_vault_acocunt = next_account_info(account_info_iter)?;
+    let temp_mint = next_account_info(account_info_iter)?;
     let temp_token_account = next_account_info(account_info_iter)?;
-    let token_vault_b = next_account_info(account_info_iter)?;
+    let temp_vault_account = next_account_info(account_info_iter)?;
+    let receiver_token_account = next_account_info(account_info_iter)?;
+    let payer_token_account = next_account_info(account_info_iter)?;
     let tick_array_0 = next_account_info(account_info_iter)?;
     let tick_array_1 = next_account_info(account_info_iter)?;
     let tick_array_2 = next_account_info(account_info_iter)?;
     let oracle = next_account_info(account_info_iter)?;
     let spl_token_program = next_account_info(account_info_iter)?;
+    let memo_program = next_account_info(account_info_iter)?;
     let whirlpool_data = Whirlpool::try_from_slice(&whirlpool.data.borrow())?;
-    let paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck_account.data.borrow())?;
+    let paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck.data.borrow())?;
     let required_lamports = Rent::get()?.minimum_balance(Account::LEN);
 
     // Create a temp token account to hold the swap output
@@ -63,13 +65,13 @@ pub fn process_execute_paycheck(
     let create_account_ix = spl_token::instruction::initialize_account3(
         &spl_token::id(),
         temp_token_account.key,
-        &target_mint.key,
-        &paycheck_account.key,
+        &temp_mint.key,
+        &paycheck.key,
     )?;
 
     invoke_signed(
         &create_account_ix,
-        &[temp_token_account.clone(), target_mint.clone()],
+        &[temp_token_account.clone(), temp_mint.clone()],
         &[&[
             PAYCHECK_SEED,
             &whirlpool.key.to_bytes(),
@@ -80,13 +82,12 @@ pub fn process_execute_paycheck(
 
     // Perform the swap
     let amount = paycheck_data.tip + paycheck_data.amount;
-    let swap_discriminator: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
     let input_args = SwapArgs {
-        swap_discriminator,
+        swap_discriminator: SWAP_DISCRIMINATOR,
         amount,
-        other_amount_threshold: 0,
+        other_amount_threshold: u64::MAX,
         sqrt_price_limit: 0,
-        amount_specified_is_input: true,
+        amount_specified_is_input: false,
         a_to_b: true,
         remaining_accounts_info: None,
     };
@@ -95,17 +96,21 @@ pub fn process_execute_paycheck(
         whirlpools_state::ID,
         &input_args,
         vec![
-            AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new(*paycheck_account.key, true),
+            AccountMeta::new_readonly(*spl_token_program.key, false),
+            AccountMeta::new_readonly(*spl_token_program.key, false),
+            AccountMeta::new_readonly(*memo_program.key, false),
+            AccountMeta::new(*paycheck.key, true),
             AccountMeta::new(*whirlpool.key, false),
-            AccountMeta::new(*creator_ata.key, false),
-            AccountMeta::new(*token_vault_a.key, false),
-            AccountMeta::new(*temp_token_account.key, false), //token_owner_account_b, false),
-            AccountMeta::new(*token_vault_b.key, false),
+            AccountMeta::new_readonly(*treasury_mint.key, false),
+            AccountMeta::new_readonly(*temp_mint.key, false),
+            AccountMeta::new(*treasury_token_account.key, false),
+            AccountMeta::new(*treasury_vault_acocunt.key, false),
+            AccountMeta::new(*temp_token_account.key, false),
+            AccountMeta::new(*temp_vault_account.key, false),
             AccountMeta::new(*tick_array_0.key, false),
             AccountMeta::new(*tick_array_1.key, false),
             AccountMeta::new(*tick_array_2.key, false),
-            AccountMeta::new_readonly(*oracle.key, false),
+            AccountMeta::new(*oracle.key, false),
         ],
     );
 
@@ -113,12 +118,16 @@ pub fn process_execute_paycheck(
         &swap_ix,
         &[
             spl_token_program.clone(),
-            paycheck_account.clone(),
+            spl_token_program.clone(),
+            memo_program.clone(),
+            paycheck.clone(),
             whirlpool.clone(),
-            creator_ata.clone(),
-            token_vault_a.clone(),
+            treasury_mint.clone(),
+            temp_mint.clone(),
+            treasury_token_account.clone(),
+            treasury_vault_acocunt.clone(),
             temp_token_account.clone(),
-            token_vault_b.clone(),
+            temp_vault_account.clone(),
             tick_array_0.clone(),
             tick_array_1.clone(),
             tick_array_2.clone(),
@@ -141,11 +150,12 @@ pub fn execute_paycheck_ix(
     payer: Pubkey,
     creator: Pubkey,
     whirlpool: Pubkey,
-    target_mint: Pubkey,
+    treasury_mint: Pubkey,
+    temp_mint: Pubkey,
+    treasury_token_account: Pubkey,
     temp_token_account: Pubkey,
-    token_vault_a : Pubkey,
-    token_vault_b : Pubkey,
-    receiver_ata : Pubkey,
+    treasury_vault_acocunt: Pubkey,
+    temp_vault_account: Pubkey,
     tick_array_0 : Pubkey,
     tick_array_1 : Pubkey,
     tick_array_2 : Pubkey,
@@ -161,9 +171,13 @@ pub fn execute_paycheck_ix(
         ExecutePaycheckArgs { creator },
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
-    let creator_ata = get_associated_token_address(&creator, &target_mint);
-    let payer_ata = get_associated_token_address(&payer, &target_mint);
 
+    let receiver_token_account = get_associated_token_address(&creator, &temp_mint);
+    let payer_token_account = get_associated_token_address(&payer, &temp_mint);
+    println!("temp_token_account: {:?}", temp_token_account);
+    println!("paycheck: {:?}", paycheck);
+    println!("payer: {:?}", payer);
+    println!("oracle: {:?}", oracle);
 
     Ok(Instruction {
         program_id: ID,
@@ -171,18 +185,20 @@ pub fn execute_paycheck_ix(
             AccountMeta::new(payer, true),
             AccountMeta::new(paycheck, false),
             AccountMeta::new(whirlpool, false),
-            AccountMeta::new(target_mint, false),
-            AccountMeta::new(creator_ata, false),
-            AccountMeta::new(token_vault_a, false),
-            AccountMeta::new(receiver_ata, false),
-            AccountMeta::new(payer_ata, false),
+            AccountMeta::new(treasury_mint, false),
+            AccountMeta::new(treasury_token_account, false),
+            AccountMeta::new(treasury_vault_acocunt, false),
+            AccountMeta::new(temp_mint, false),
             AccountMeta::new(temp_token_account, true),
-            AccountMeta::new(token_vault_b, false),
+            AccountMeta::new(temp_vault_account, false),
+            AccountMeta::new(receiver_token_account, false),
+            AccountMeta::new(payer_token_account, false),
             AccountMeta::new(tick_array_0, false),
             AccountMeta::new(tick_array_1, false),
             AccountMeta::new(tick_array_2, false),
-            AccountMeta::new_readonly(oracle, false),
+            AccountMeta::new(oracle, false),
             AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(MEMO_PROGRAM_ID, false),
             AccountMeta::new_readonly(whirlpools_state::ID, false),
             AccountMeta::new_readonly(solana_program::system_program::id(), false),
         ],
