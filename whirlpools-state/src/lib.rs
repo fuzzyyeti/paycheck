@@ -66,14 +66,38 @@ pub struct WhirlpoolRewardInfo {
     /// emissions were turned on.
     pub growth_global_x64: u128,
 }
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct RemainingAccountsInfo {
+    pub slices: Vec<RemainingAccountsSlice>,
+}
 
+#[derive(BorshSerialize, BorshDeserialize,Debug)]
+pub struct RemainingAccountsSlice {
+    pub accounts_type: AccountsType,
+    pub length: u8,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+             pub enum AccountsType {
+                 TransferHookA,
+                 TransferHookB,
+                 TransferHookReward,
+                 TransferHookInput,
+                 TransferHookIntermediate,
+                 TransferHookOutput,
+                 SupplementalTickArrays,
+                 SupplementalTickArraysOne,
+                 SupplementalTickArraysTwo,
+             }
 #[derive(BorshSerialize, Debug)]
 pub struct SwapArgs {
+    pub swap_discriminator: [u8; 8],
     pub amount: u64,
     pub other_amount_threshold: u64,
     pub sqrt_price_limit: u128,
     pub amount_specified_is_input: bool,
     pub a_to_b: bool,
+    pub remaining_accounts_info: Option<RemainingAccountsInfo>,
 }
 
 pub fn is_a_to_b(mint: &Pubkey, mint_b: &Pubkey) -> bool {

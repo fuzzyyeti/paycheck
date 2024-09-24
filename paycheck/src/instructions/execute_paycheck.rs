@@ -82,11 +82,13 @@ pub fn process_execute_paycheck(
     let amount = paycheck_data.tip + paycheck_data.amount;
     let swap_discriminator: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
     let input_args = SwapArgs {
+        swap_discriminator,
         amount,
         other_amount_threshold: 0,
         sqrt_price_limit: 0,
         amount_specified_is_input: true,
         a_to_b: true,
+        remaining_accounts_info: None,
     };
 
     let swap_ix = Instruction::new_with_borsh(
