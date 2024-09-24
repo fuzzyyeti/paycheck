@@ -1,7 +1,7 @@
-use std::cmp::Ordering;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey;
 use solana_program::pubkey::Pubkey;
+use std::cmp::Ordering;
 
 pub const ID: Pubkey = pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc");
 pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");

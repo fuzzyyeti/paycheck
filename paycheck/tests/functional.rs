@@ -1,7 +1,10 @@
 use borsh::BorshDeserialize;
 use once_cell::sync::Lazy;
+use paycheck::consts::PAYCHECK_SEED;
 use paycheck::instructions::create_paycheck::CreatePaycheckArgs;
+use paycheck::instructions::execute_paycheck_ix;
 use paycheck::state::Paycheck;
+use paycheck::ID;
 use solana_program::hash::Hash;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program_option::COption;
@@ -14,9 +17,6 @@ use solana_sdk::signature::{Keypair, SeedDerivable, Signer};
 use solana_sdk::transaction::Transaction;
 use spl_token::state::AccountState;
 use std::str::FromStr;
-use paycheck::consts::PAYCHECK_SEED;
-use paycheck::ID;
-use paycheck::instructions::execute_paycheck_ix;
 use whirlpools_state::{SwapArgs, TOKEN_PROGRAM_ID, USDC_MINT};
 
 static PROGRAM_ID: Lazy<Pubkey> =
@@ -202,10 +202,12 @@ const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1")
 async fn test_execute_paycheck() {
     let creator = Pubkey::new_unique();
     let (paycheck_address, bump) = Pubkey::find_program_address(
-        &[PAYCHECK_SEED,
+        &[
+            PAYCHECK_SEED,
             &WHIRLPOOL_ADDRESS.to_bytes(),
-            &creator.to_bytes()],
-        &ID
+            &creator.to_bytes(),
+        ],
+        &ID,
     );
     let (mut banks_client, payer, recent_blockhash, owner, token_account_b) =
         setup_program(|mut p| {
@@ -222,35 +224,41 @@ async fn test_execute_paycheck() {
                 bump,
             };
             let data = borsh::to_vec(&paycheck).unwrap();
-            p.add_account(paycheck_address, Account {
-                owner: ID,
-                executable: false,
-                rent_epoch: 0,
-                lamports: 100000000,
-                data
-            });
-        }).await;
+            p.add_account(
+                paycheck_address,
+                Account {
+                    owner: ID,
+                    executable: false,
+                    rent_epoch: 0,
+                    lamports: 100000000,
+                    data,
+                },
+            );
+        })
+        .await;
 
-    let temp_token_account = Keypair::from_seed(&[1 ; 32]).unwrap();
+    let temp_token_account = Keypair::from_seed(&[1; 32]).unwrap();
     let execute_paycheck_ix = execute_paycheck_ix(
         payer.pubkey(),
         creator,
         WHIRLPOOL_ADDRESS,
         USDC_MINT,
-        temp_token_account.pubkey()
-    ).unwrap();
+        temp_token_account.pubkey(),
+    )
+    .unwrap();
     let tx = Transaction::new_signed_with_payer(
         &[execute_paycheck_ix],
         Some(&payer.pubkey()),
         &[&payer, &temp_token_account],
-        recent_blockhash
+        recent_blockhash,
     );
     banks_client.process_transaction(tx).await.unwrap();
 }
 
-async fn setup_program<F>(mod_program : F) ->
-       (BanksClient, Keypair, Hash, Keypair, Pubkey )
-        where F: FnOnce(&mut ProgramTest) -> () {
+async fn setup_program<F>(mod_program: F) -> (BanksClient, Keypair, Hash, Keypair, Pubkey)
+where
+    F: FnOnce(&mut ProgramTest) -> (),
+{
     let mut program_test = ProgramTest::new(
         "paycheck",
         *PROGRAM_ID,

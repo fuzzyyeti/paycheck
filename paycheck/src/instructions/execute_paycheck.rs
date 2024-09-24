@@ -14,7 +14,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
 use spl_token::state::Account;
-use whirlpools_state::Whirlpool;
+use whirlpools_state::{SwapArgs, Whirlpool};
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 pub struct ExecutePaycheckArgs {
@@ -40,13 +40,12 @@ pub fn process_execute_paycheck(
     let tick_array_1 = next_account_info(account_info_iter)?;
     let tick_array_2 = next_account_info(account_info_iter)?;
     let oracle = next_account_info(account_info_iter)?;
-    msg!("1");
+    let spl_token_program = next_account_info(account_info_iter)?;
     let whirlpool_data = Whirlpool::try_from_slice(&whirlpool.data.borrow())?;
-    msg!("2");
-    let paycheck_data = Paycheck::try_from_slice(&paycheck_account.data.borrow())?;
-    msg!("3");
+    let paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck_account.data.borrow())?;
     let required_lamports = Rent::get()?.minimum_balance(Account::LEN);
-    msg!("creating account ix");
+
+    // Create a temp token account to hold the swap output
     let init_account_ix = solana_program::system_instruction::create_account(
         payer.key,
         temp_token_account.key,
@@ -54,16 +53,12 @@ pub fn process_execute_paycheck(
         Account::LEN as u64,
         &spl_token::id(),
     );
-    msg!("invoking create acct");
 
     invoke(
         &init_account_ix,
         &[payer.clone(), temp_token_account.clone()],
     )?;
 
-    msg!("the token program id is {:?}", spl_token::id());
-    msg!("temp_account owner is {:?}", temp_token_account.owner);
-    msg!("mint owner is {:?}", target_mint.owner);
     let create_account_ix = spl_token::instruction::initialize_account3(
         &spl_token::id(),
         temp_token_account.key,
@@ -82,6 +77,61 @@ pub fn process_execute_paycheck(
         ]],
     )?;
 
+    // Perform the swap
+    let amount = paycheck_data.tip + paycheck_data.amount;
+    let swap_discriminator: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
+    let input_args = SwapArgs {
+        swap_discriminator,
+        amount,
+        other_amount_threshold: 0,
+        sqrt_price_limit: 0,
+        amount_specified_is_input: true,
+        a_to_b: true,
+    };
+
+    let swap_ix = Instruction::new_with_borsh(
+        whirlpools_state::ID,
+        &input_args,
+        vec![
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new(*paycheck_account.key, true),
+            AccountMeta::new(*whirlpool.key, false),
+            AccountMeta::new(*creator_ata.key, false),
+            AccountMeta::new(*token_vault_a.key, false),
+            AccountMeta::new(*temp_token_account.key, false), //token_owner_account_b, false),
+            AccountMeta::new(*token_vault_b.key, false),
+            AccountMeta::new(*tick_array_0.key, false),
+            AccountMeta::new(*tick_array_1.key, false),
+            AccountMeta::new(*tick_array_2.key, false),
+            AccountMeta::new_readonly(*oracle.key, false),
+        ],
+    );
+
+    invoke_signed(
+        &swap_ix,
+        &[
+            spl_token_program.clone(),
+            paycheck_account.clone(),
+            whirlpool.clone(),
+            creator_ata.clone(),
+            token_vault_a.clone(),
+            temp_token_account.clone(),
+            token_vault_b.clone(),
+            tick_array_0.clone(),
+            tick_array_1.clone(),
+            tick_array_2.clone(),
+            oracle.clone(),
+        ],
+        &[&[
+            PAYCHECK_SEED,
+            &whirlpool.key.to_bytes(),
+            &args.creator.to_bytes(),
+            &[paycheck_data.bump],
+        ]],
+    )?;
+
+    // Send the output to the receiver and executor
+
     Ok(())
 }
 
@@ -97,17 +147,12 @@ pub fn execute_paycheck_ix(
         &ID,
     )
     .0;
-    println!("Paycheck address 2 {:?}", paycheck);
 
     let data = borsh::to_vec(&PaycheckInstructions::ExecutePaycheck(
         ExecutePaycheckArgs { creator },
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
-    println!("Ix DATA {:?}", data);
     let paycheck_instruction_des = PaycheckInstructions::try_from_slice(&data);
-    println!("PID {:?}", paycheck_instruction_des);
-
-
     let creator_ata =
         spl_associated_token_account::get_associated_token_address(&creator, &target_mint);
 
