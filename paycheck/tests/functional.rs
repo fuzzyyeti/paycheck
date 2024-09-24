@@ -27,7 +27,7 @@ const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1")
 // #[tokio::test]
 // async fn try_swap() {
 //     let program_id = *PROGRAM_ID;
-//     let (mut banks_client, payer, recent_blockhash, owner, token_account_b) = setup_program(|p| p).await;
+//     let (mut banks_client, payer, recent_blockhash, owner, token_account_b) = setup_program(|p| {}).await;
 //     let token_account_address =
 //         spl_associated_token_account::get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
 //     let oracle = Pubkey::find_program_address(
@@ -238,12 +238,68 @@ async fn test_execute_paycheck() {
         .await;
 
     let temp_token_account = Keypair::from_seed(&[1; 32]).unwrap();
+
+    let oracle = Pubkey::find_program_address(
+        &[b"oracle", WHIRLPOOL_ADDRESS.as_ref()],
+        &whirlpools_state::ID,
+    )
+        .0;
+    let whirlpool = whirlpools_state::Whirlpool::try_from_slice(
+        &banks_client
+            .get_account(WHIRLPOOL_ADDRESS)
+            .await
+            .unwrap()
+            .unwrap()
+            .data[8..],
+    )
+        .unwrap();
+
+    let index_spacing = (whirlpool.tick_spacing as i32) * 88;
+    let start_tick_index =
+        whirlpool.tick_current_index - (whirlpool.tick_current_index % index_spacing);
+    let tick_array_0 = Pubkey::find_program_address(
+        &[
+            b"tick_array",
+            WHIRLPOOL_ADDRESS.as_ref(),
+            start_tick_index.to_string().as_bytes(),
+        ],
+        &whirlpools_state::ID,
+    )
+        .0;
+    let tick_array_1 = Pubkey::find_program_address(
+        &[
+            b"tick_array",
+            WHIRLPOOL_ADDRESS.as_ref(),
+            (start_tick_index - index_spacing).to_string().as_bytes(),
+        ],
+        &whirlpools_state::ID,
+    )
+        .0;
+    let tick_array_2 = Pubkey::find_program_address(
+        &[
+            b"tick_array",
+            WHIRLPOOL_ADDRESS.as_ref(),
+            (start_tick_index - index_spacing * 2)
+                .to_string()
+                .as_bytes(),
+        ],
+        &whirlpools_state::ID,
+    ).0;
+    let paycheck_account = banks_client.get_account(paycheck_address).await.unwrap().unwrap();
+    let paycheck = Paycheck::try_from_slice(&paycheck_account.data).unwrap();
     let execute_paycheck_ix = execute_paycheck_ix(
         payer.pubkey(),
         creator,
         WHIRLPOOL_ADDRESS,
         USDC_MINT,
         temp_token_account.pubkey(),
+        whirlpool.token_vault_a,
+        whirlpool.token_vault_b,
+        paycheck.receiver,
+        tick_array_0,
+        tick_array_1,
+        tick_array_2,
+        oracle,
     )
     .unwrap();
     let tx = Transaction::new_signed_with_payer(

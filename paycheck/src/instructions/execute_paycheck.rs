@@ -13,6 +13,7 @@ use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
+use spl_associated_token_account::get_associated_token_address;
 use spl_token::state::Account;
 use whirlpools_state::{SwapArgs, Whirlpool};
 
@@ -81,7 +82,6 @@ pub fn process_execute_paycheck(
     let amount = paycheck_data.tip + paycheck_data.amount;
     let swap_discriminator: [u8; 8] = [248, 198, 158, 145, 225, 117, 135, 200];
     let input_args = SwapArgs {
-        swap_discriminator,
         amount,
         other_amount_threshold: 0,
         sqrt_price_limit: 0,
@@ -141,6 +141,13 @@ pub fn execute_paycheck_ix(
     whirlpool: Pubkey,
     target_mint: Pubkey,
     temp_token_account: Pubkey,
+    token_vault_a : Pubkey,
+    token_vault_b : Pubkey,
+    receiver_ata : Pubkey,
+    tick_array_0 : Pubkey,
+    tick_array_1 : Pubkey,
+    tick_array_2 : Pubkey,
+    oracle : Pubkey,
 ) -> Result<Instruction, PaycheckProgramError> {
     let paycheck = Pubkey::find_program_address(
         &[PAYCHECK_SEED, &whirlpool.to_bytes(), &creator.to_bytes()],
@@ -152,18 +159,9 @@ pub fn execute_paycheck_ix(
         ExecutePaycheckArgs { creator },
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
-    let paycheck_instruction_des = PaycheckInstructions::try_from_slice(&data);
-    let creator_ata =
-        spl_associated_token_account::get_associated_token_address(&creator, &target_mint);
+    let creator_ata = get_associated_token_address(&creator, &target_mint);
+    let payer_ata = get_associated_token_address(&payer, &target_mint);
 
-    let payer_ata = Pubkey::new_unique();
-    let token_vault_a = Pubkey::new_unique();
-    let token_vault_b = Pubkey::new_unique();
-    let receiver_ata = Pubkey::new_unique();
-    let tick_array_0 = Pubkey::new_unique();
-    let tick_array_1 = Pubkey::new_unique();
-    let tick_array_2 = Pubkey::new_unique();
-    let oracle = Pubkey::new_unique();
 
     Ok(Instruction {
         program_id: ID,

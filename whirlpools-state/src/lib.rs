@@ -69,7 +69,6 @@ pub struct WhirlpoolRewardInfo {
 
 #[derive(BorshSerialize, Debug)]
 pub struct SwapArgs {
-    pub swap_discriminator: [u8; 8],
     pub amount: u64,
     pub other_amount_threshold: u64,
     pub sqrt_price_limit: u128,
