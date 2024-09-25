@@ -25,7 +25,6 @@ pub fn process_execute_paycheck(
     accounts: &[AccountInfo],
     args: ExecutePaycheckArgs,
 ) -> Result<(), ProgramError> {
-
     let account_info_iter = &mut accounts.iter();
     let payer = next_account_info(account_info_iter)?;
     let paycheck = next_account_info(account_info_iter)?;
@@ -156,10 +155,10 @@ pub fn execute_paycheck_ix(
     temp_token_account: Pubkey,
     treasury_vault_acocunt: Pubkey,
     temp_vault_account: Pubkey,
-    tick_array_0 : Pubkey,
-    tick_array_1 : Pubkey,
-    tick_array_2 : Pubkey,
-    oracle : Pubkey,
+    tick_array_0: Pubkey,
+    tick_array_1: Pubkey,
+    tick_array_2: Pubkey,
+    oracle: Pubkey,
 ) -> Result<Instruction, PaycheckProgramError> {
     let paycheck = Pubkey::find_program_address(
         &[PAYCHECK_SEED, &whirlpool.to_bytes(), &creator.to_bytes()],

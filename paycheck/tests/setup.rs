@@ -7,14 +7,13 @@ use solana_program_test::{processor, BanksClient, ProgramTest};
 use solana_sdk::account::Account;
 use solana_sdk::signature::{Keypair, Signer};
 use spl_token::state::AccountState;
-use whirlpools_state::{TOKEN_PROGRAM_ID};
+use whirlpools_state::TOKEN_PROGRAM_ID;
 
 pub const PROGRAM_ID: Pubkey = pubkey!("54oykPNNXxpXihbuU5H6j3MZmqCxaAdHALDvVYfzwnW4");
 
 pub const WHIRLPOOL_ADDRESS: Pubkey = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
 pub const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
 pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-
 
 pub async fn setup_program<F>(mod_program: F) -> (BanksClient, Keypair, Hash, Keypair, Pubkey)
 where
@@ -154,7 +153,7 @@ where
         },
     );
 
-    let (mut banks_client, payer, recent_blockhash) = program_test.start().await;
+    let (banks_client, payer, recent_blockhash) = program_test.start().await;
     (
         banks_client,
         payer,

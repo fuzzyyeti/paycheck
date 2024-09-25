@@ -1,30 +1,30 @@
+use crate::setup::{setup_program, BSOL_MINT, PROGRAM_ID, USDC_MINT, WHIRLPOOL_ADDRESS};
 use borsh::BorshDeserialize;
 use paycheck::consts::PAYCHECK_SEED;
 use paycheck::instructions::{execute_paycheck_ix, CreatePaycheckArgs};
 use paycheck::state::Paycheck;
 use paycheck::ID;
+use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program_option::COption;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use solana_program_test::{tokio};
+use solana_program_test::tokio;
 use solana_sdk::account::Account;
+use solana_sdk::pubkey;
 use solana_sdk::signature::{Keypair, SeedDerivable, Signer};
 use solana_sdk::transaction::Transaction;
 use spl_token::state::AccountState;
-use std::str::FromStr;
-use solana_program::instruction::{AccountMeta, Instruction};
-use solana_sdk::pubkey;
 use whirlpools_state::{SwapArgs, TOKEN_PROGRAM_ID};
-use crate::setup::{setup_program, BSOL_MINT, PROGRAM_ID, USDC_MINT, WHIRLPOOL_ADDRESS};
 
 mod setup;
 
-const SWAP_DISCRIMINATOR: [u8; 8] = [ 0x2b, 0x04, 0xed, 0x0b, 0x1a, 0xc9, 0x1e, 0x62];
+const SWAP_DISCRIMINATOR: [u8; 8] = [0x2b, 0x04, 0xed, 0x0b, 0x1a, 0xc9, 0x1e, 0x62];
 
 #[tokio::test]
 async fn try_swap() {
     let program_id = PROGRAM_ID;
-    let (mut banks_client, payer, recent_blockhash, owner, token_account_b) = setup_program(|p| {}).await;
+    let (mut banks_client, payer, recent_blockhash, owner, token_account_b) =
+        setup_program(|p| {}).await;
     let token_account_address =
         spl_associated_token_account::get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
     let oracle = Pubkey::find_program_address(
@@ -89,17 +89,11 @@ async fn try_swap() {
         whirlpools_state::ID,
         &input_args,
         vec![
-            AccountMeta::new_readonly(
-                spl_token::id(),
-                false,
-            ),
-            AccountMeta::new_readonly(
-                spl_token::id(),
-                false,
-            ),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(
                 pubkey!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-               false
+                false,
             ),
             AccountMeta::new(owner.pubkey(), true),
             AccountMeta::new(WHIRLPOOL_ADDRESS, false),
@@ -216,58 +210,60 @@ async fn test_execute_paycheck() {
         ],
         &ID,
     );
-    let (mut banks_client, payer, recent_blockhash, owner, token_account_b) =
-        setup_program(|mut p| {
-            let paycheck = Paycheck {
-                creator,
-                receiver: Pubkey::new_unique(),
-                start_date: 100,
-                increment: 100,
-                amount: 10_000_000,
-                whirlpool: WHIRLPOOL_ADDRESS,
-                target_mint: USDC_MINT,
-                tip: 50_000,
-                is_enabled: true,
-                bump,
-            };
-            let data = borsh::to_vec(&paycheck).unwrap();
-            p.add_account(
-                paycheck_address,
-                Account {
-                    owner: ID,
-                    executable: false,
-                    rent_epoch: 0,
-                    lamports: 100000000,
-                    data,
-                },
-            );
+    let (mut banks_client, payer, recent_blockhash, owner, token_account_b) = setup_program(|p| {
+        let paycheck = Paycheck {
+            creator,
+            receiver: Pubkey::new_unique(),
+            start_date: 100,
+            increment: 100,
+            amount: 10_000_000,
+            whirlpool: WHIRLPOOL_ADDRESS,
+            target_mint: USDC_MINT,
+            tip: 50_000,
+            is_enabled: true,
+            bump,
+        };
+        let data = borsh::to_vec(&paycheck).unwrap();
+        p.add_account(
+            paycheck_address,
+            Account {
+                owner: ID,
+                executable: false,
+                rent_epoch: 0,
+                lamports: 100000000,
+                data,
+            },
+        );
 
-            let treasury_token_account = spl_token::state::Account {
-                mint: BSOL_MINT,
-                owner: paycheck_address,
-                amount: 1_000_000_000,
-                delegate: COption::None,
-                state: AccountState::Initialized,
-                is_native: COption::None,
-                delegated_amount: 0,
-                close_authority: COption::None,
-            };
-            let treasury_token_account_address =
-                spl_associated_token_account::get_associated_token_address(&paycheck_address, &BSOL_MINT);
-            let mut data: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
-            treasury_token_account.pack_into_slice(&mut data);
-            p.add_account(
-                treasury_token_account_address,
-                Account {
-                    lamports: 100000000,
-                    data,
-                    owner: TOKEN_PROGRAM_ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
+        let treasury_token_account = spl_token::state::Account {
+            mint: BSOL_MINT,
+            owner: paycheck_address,
+            amount: 1_000_000_000,
+            delegate: COption::None,
+            state: AccountState::Initialized,
+            is_native: COption::None,
+            delegated_amount: 0,
+            close_authority: COption::None,
+        };
+        let treasury_token_account_address =
+            spl_associated_token_account::get_associated_token_address(
+                &paycheck_address,
+                &BSOL_MINT,
             );
-        })
-        .await;
+        let mut data: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
+        treasury_token_account.pack_into_slice(&mut data);
+        p.add_account(
+            treasury_token_account_address,
+            Account {
+                lamports: 100000000,
+                data,
+                owner: TOKEN_PROGRAM_ID,
+                executable: false,
+                rent_epoch: 0,
+            },
+        );
+    })
+    .await;
 
     let temp_token_account = Keypair::from_seed(&[1; 32]).unwrap();
 
@@ -275,7 +271,7 @@ async fn test_execute_paycheck() {
         &[b"oracle", WHIRLPOOL_ADDRESS.as_ref()],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let whirlpool = whirlpools_state::Whirlpool::try_from_slice(
         &banks_client
             .get_account(WHIRLPOOL_ADDRESS)
@@ -283,7 +279,8 @@ async fn test_execute_paycheck() {
             .unwrap()
             .unwrap()
             .data,
-    ).unwrap();
+    )
+    .unwrap();
 
     let index_spacing = (whirlpool.tick_spacing as i32) * 88;
     let start_tick_index =
@@ -296,7 +293,7 @@ async fn test_execute_paycheck() {
         ],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let tick_array_1 = Pubkey::find_program_address(
         &[
             b"tick_array",
@@ -305,7 +302,7 @@ async fn test_execute_paycheck() {
         ],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let tick_array_2 = Pubkey::find_program_address(
         &[
             b"tick_array",
@@ -315,13 +312,15 @@ async fn test_execute_paycheck() {
                 .as_bytes(),
         ],
         &whirlpools_state::ID,
-    ).0;
-    let treasury_token_account = spl_associated_token_account::get_associated_token_address(
-        &paycheck_address,
-        &BSOL_MINT,
-    );
+    )
+    .0;
+    let treasury_token_account =
+        spl_associated_token_account::get_associated_token_address(&paycheck_address, &BSOL_MINT);
 
-    println!("treasury_token_account outside: {:?}", treasury_token_account);
+    println!(
+        "treasury_token_account outside: {:?}",
+        treasury_token_account
+    );
     let execute_paycheck_ix = execute_paycheck_ix(
         payer.pubkey(),
         creator,
@@ -338,7 +337,8 @@ async fn test_execute_paycheck() {
         oracle,
     )
     .unwrap();
-    let cu_ix = solana_sdk::compute_budget::ComputeBudgetInstruction::set_compute_unit_limit(400_000);
+    let cu_ix =
+        solana_sdk::compute_budget::ComputeBudgetInstruction::set_compute_unit_limit(400_000);
     let tx = Transaction::new_signed_with_payer(
         &[cu_ix, execute_paycheck_ix],
         Some(&payer.pubkey()),
@@ -347,4 +347,3 @@ async fn test_execute_paycheck() {
     );
     banks_client.process_transaction(tx).await.unwrap();
 }
-

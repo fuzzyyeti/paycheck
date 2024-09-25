@@ -71,24 +71,24 @@ pub struct RemainingAccountsInfo {
     pub slices: Vec<RemainingAccountsSlice>,
 }
 
-#[derive(BorshSerialize, BorshDeserialize,Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct RemainingAccountsSlice {
     pub accounts_type: AccountsType,
     pub length: u8,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
-             pub enum AccountsType {
-                 TransferHookA,
-                 TransferHookB,
-                 TransferHookReward,
-                 TransferHookInput,
-                 TransferHookIntermediate,
-                 TransferHookOutput,
-                 SupplementalTickArrays,
-                 SupplementalTickArraysOne,
-                 SupplementalTickArraysTwo,
-             }
+pub enum AccountsType {
+    TransferHookA,
+    TransferHookB,
+    TransferHookReward,
+    TransferHookInput,
+    TransferHookIntermediate,
+    TransferHookOutput,
+    SupplementalTickArrays,
+    SupplementalTickArraysOne,
+    SupplementalTickArraysTwo,
+}
 #[derive(BorshSerialize, Debug)]
 pub struct SwapArgs {
     pub swap_discriminator: [u8; 8],
