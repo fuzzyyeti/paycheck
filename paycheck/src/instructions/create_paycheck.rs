@@ -6,21 +6,20 @@ use crate::ID;
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_macros::{assert_derivation, assert_signer};
 use solana_program::account_info::{next_account_info, AccountInfo};
+use solana_program::clock::UnixTimestamp;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_instruction;
+use solana_program::{msg, system_instruction};
 use solana_program::sysvar::Sysvar;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
 pub struct CreatePaycheckArgs {
     pub receiver: Pubkey,
-    pub start_date: u64,
-    pub increment: u64,
+    pub increment: UnixTimestamp,
     pub amount: u64,
-    pub target_mint: Pubkey,
     pub tip: u64,
     pub whirlpool: Pubkey,
 }
@@ -71,12 +70,10 @@ pub fn process_create_paycheck(
     let mut config_account = paycheck_account.try_borrow_mut_data()?;
     let mut paycheck_account_data = Paycheck::try_from_slice(&config_account)?;
     paycheck_account_data.receiver = config_args.receiver;
-    paycheck_account_data.start_date = config_args.start_date;
     paycheck_account_data.increment = config_args.increment;
+    paycheck_account_data.last_executed = 0;
     paycheck_account_data.amount = config_args.amount;
     paycheck_account_data.whirlpool = config_args.whirlpool;
-    paycheck_account_data.is_enabled = true;
-    paycheck_account_data.target_mint = config_args.target_mint;
     paycheck_account_data.tip = config_args.tip;
     paycheck_account_data.bump = bump;
 

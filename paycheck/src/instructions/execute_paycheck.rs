@@ -5,7 +5,9 @@ use crate::state::Paycheck;
 use crate::ID;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::{next_account_info, AccountInfo};
+use solana_program::clock::Clock;
 use solana_program::instruction::{AccountMeta, Instruction};
+use solana_program::msg;
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
@@ -141,6 +143,10 @@ pub fn process_execute_paycheck(
     )?;
 
     // Send the output to the receiver and executor
+
+    // Update the paycheck account
+    let current_timestamp = Clock::get()?.unix_timestamp;
+    msg!("Current timestamp: {}", current_timestamp);
 
     Ok(())
 }
