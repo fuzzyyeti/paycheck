@@ -174,10 +174,6 @@ pub fn execute_paycheck_ix(
 
     let receiver_token_account = get_associated_token_address(&creator, &temp_mint);
     let payer_token_account = get_associated_token_address(&payer, &temp_mint);
-    println!("temp_token_account: {:?}", temp_token_account);
-    println!("paycheck: {:?}", paycheck);
-    println!("payer: {:?}", payer);
-    println!("oracle: {:?}", oracle);
 
     Ok(Instruction {
         program_id: ID,
