@@ -156,8 +156,57 @@ pub fn process_execute_paycheck(
         ]],
     )?;
 
+    msg!("Temp owner: {:?}", temp_token_account.owner);
+    msg!("Receiver owner: {:?}", receiver_token_account.owner);
+    msg!("Receiver: {:?}", receiver_token_account.key);
     // Send the output to the receiver and executor
+    let transfer_ix = spl_token::instruction::transfer(
+        &spl_token::id(),
+        temp_token_account.key,
+        receiver_token_account.key,
+        &paycheck.key,
+        &[],
+        paycheck_data.amount,
+    )?;
 
+    invoke_signed(
+        &transfer_ix,
+        &[
+            temp_token_account.clone(),
+            receiver_token_account.clone(),
+            paycheck.clone(),
+        ],
+        &[&[
+            PAYCHECK_SEED,
+            &whirlpool.key.to_bytes(),
+            &args.creator.to_bytes(),
+            &[paycheck_data.bump],
+        ]],
+    )?;
+
+    // // Close the temp token account
+    // let close_account_ix = spl_token::instruction::close_account(
+    //     &spl_token::id(),
+    //     temp_token_account.key,
+    //     payer_token_account.key,
+    //     &payer.key,
+    //     &[&payer.key],
+    // )?;
+    //
+    // invoke_signed(
+    //     &close_account_ix,
+    //     &[
+    //         temp_token_account.clone(),
+    //         payer_token_account.clone(),
+    //         payer.clone(),
+    //     ],
+    //     &[&[
+    //         PAYCHECK_SEED,
+    //         &whirlpool.key.to_bytes(),
+    //         &args.creator.to_bytes(),
+    //         &[paycheck_data.bump],
+    //     ]],
+    // )?;
     // Update the paycheck account
     let current_timestamp = Clock::get()?.unix_timestamp;
     msg!("Current timestamp: {}", current_timestamp);
@@ -193,6 +242,9 @@ pub fn execute_paycheck_ix(
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
 
     let receiver_token_account = get_associated_token_address(&creator, &temp_mint);
+    println!("Receiver token account: {:?}", receiver_token_account);
+    println!("Receiver token account owner: {:?}", creator);
+    println!("Receiver mint: {:?}", temp_mint);
     let payer_token_account = get_associated_token_address(&payer, &temp_mint);
 
     Ok(Instruction {

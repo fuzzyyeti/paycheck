@@ -17,7 +17,7 @@ pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTD
 
 pub async fn setup_program<F>(mod_program: F) -> (BanksClient, Keypair, Hash, Keypair, Pubkey)
 where
-    F: FnOnce(&mut ProgramTest) -> (),
+    F: FnOnce(&mut ProgramTest, &Pubkey) -> (),
 {
     let mut program_test = ProgramTest::new(
         "paycheck",
@@ -74,9 +74,9 @@ where
         "./tests/data/usdc_mint.bin",
     );
 
-    mod_program(&mut program_test);
-
     let owner = Keypair::new();
+    mod_program(&mut program_test, &owner.pubkey());
+
     let token_account_a = spl_token::state::Account {
         mint: BSOL_MINT,
         owner: owner.pubkey(),
@@ -89,6 +89,8 @@ where
     };
     let token_account_address =
         spl_associated_token_account::get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
+    println!("Receiver owner: {:?}", owner.pubkey());
+    println!("Token account address: {:?}", token_account_address);
     let mut data: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
     token_account_a.pack_into_slice(&mut data);
 
