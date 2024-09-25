@@ -239,6 +239,7 @@ async fn test_execute_paycheck_reverse() {
     let temp_token_account = Keypair::from_seed(&[1; 32]).unwrap();
     let receiver_token_account = get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
     let payer_token_account = get_associated_token_address(&payer.pubkey(), &BSOL_MINT);
+    println!("Payer token account: {:?}", payer_token_account);
     let create_payer_account_ix = create_associated_token_account(
         &payer.pubkey(),
         &payer.pubkey(),
@@ -320,15 +321,22 @@ async fn test_execute_paycheck_reverse() {
         tick_array_2,
         oracle,
         false,
-    )
-        .unwrap();
+    ).unwrap();
     let cu_ix =
         solana_sdk::compute_budget::ComputeBudgetInstruction::set_compute_unit_limit(400_000);
     let tx = Transaction::new_signed_with_payer(
-        &[cu_ix, execute_paycheck_ix],
+        &[cu_ix.clone(), execute_paycheck_ix.clone()],
         Some(&payer.pubkey()),
         &[&payer, &temp_token_account],
         recent_blockhash,
     );
     banks_client.process_transaction(tx).await.unwrap();
+    let blockhash = banks_client.get_latest_blockhash().await.unwrap();
+    let tx2 = Transaction::new_signed_with_payer(
+        &[cu_ix, execute_paycheck_ix],
+        Some(&payer.pubkey()),
+        &[&payer, &temp_token_account],
+        blockhash,
+    );
+    banks_client.process_transaction(tx2).await.unwrap();
 }

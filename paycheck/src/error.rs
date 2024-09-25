@@ -8,6 +8,8 @@ use thiserror::Error;
 pub enum PaycheckProgramError {
     #[error("InvalidInstruction")]
     InvalidInstructionData,
+    #[error("IntervalNotPassed")]
+    IntervalNotPassed,
 }
 impl From<PaycheckProgramError> for ProgramError {
     fn from(e: PaycheckProgramError) -> Self {
@@ -30,6 +32,7 @@ impl PrintProgramError for PaycheckProgramError {
     {
         match self {
             PaycheckProgramError::InvalidInstructionData => msg!("Error: Invalid instruction"),
+            PaycheckProgramError::IntervalNotPassed => msg!("Error: Must wait for interval before executing again"),
         }
     }
 }

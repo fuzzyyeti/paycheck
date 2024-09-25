@@ -46,12 +46,15 @@ pub fn process_execute_paycheck(
     let oracle = next_account_info(account_info_iter)?;
     let spl_token_program = next_account_info(account_info_iter)?;
     let memo_program = next_account_info(account_info_iter)?;
-    let whirlpool_data = Whirlpool::try_from_slice(&whirlpool.data.borrow())?;
-    let paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck.data.borrow())?;
+    let mut paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck.data.borrow())?;
     let required_lamports = Rent::get()?.minimum_balance(Account::LEN);
 
     // Mints come from the whirlpool make sure the input and output are correct
     assert_eq!(paycheck_data.a_to_b, args.a_to_b);
+
+    // Make sure duration has passed
+    let current_timestamp = Clock::get()?.unix_timestamp;
+    assert!(current_timestamp >= paycheck_data.last_executed + paycheck_data.increment);
 
     // Create a temp token account to hold the swap output
     let init_account_ix = solana_program::system_instruction::create_account(
@@ -156,9 +159,6 @@ pub fn process_execute_paycheck(
         ]],
     )?;
 
-    msg!("Temp owner: {:?}", temp_token_account.owner);
-    msg!("Receiver owner: {:?}", receiver_token_account.owner);
-    msg!("Receiver: {:?}", receiver_token_account.key);
     // Send the output to the receiver and executor
     let transfer_ix = spl_token::instruction::transfer(
         &spl_token::id(),
@@ -184,33 +184,57 @@ pub fn process_execute_paycheck(
         ]],
     )?;
 
-    // // Close the temp token account
-    // let close_account_ix = spl_token::instruction::close_account(
-    //     &spl_token::id(),
-    //     temp_token_account.key,
-    //     payer_token_account.key,
-    //     &payer.key,
-    //     &[&payer.key],
-    // )?;
-    //
-    // invoke_signed(
-    //     &close_account_ix,
-    //     &[
-    //         temp_token_account.clone(),
-    //         payer_token_account.clone(),
-    //         payer.clone(),
-    //     ],
-    //     &[&[
-    //         PAYCHECK_SEED,
-    //         &whirlpool.key.to_bytes(),
-    //         &args.creator.to_bytes(),
-    //         &[paycheck_data.bump],
-    //     ]],
-    // )?;
-    // Update the paycheck account
-    let current_timestamp = Clock::get()?.unix_timestamp;
-    msg!("Current timestamp: {}", current_timestamp);
+    let transfer_ix = spl_token::instruction::transfer(
+        &spl_token::id(),
+        temp_token_account.key,
+        payer_token_account.key,
+        &paycheck.key,
+        &[],
+        paycheck_data.tip,
+    )?;
 
+    invoke_signed(
+        &transfer_ix,
+        &[
+            temp_token_account.clone(),
+            payer_token_account.clone(),
+            paycheck.clone(),
+        ],
+        &[&[
+            PAYCHECK_SEED,
+            &whirlpool.key.to_bytes(),
+            &args.creator.to_bytes(),
+            &[paycheck_data.bump],
+        ]],
+    )?;
+
+    // Close the temp token account
+    let close_account_ix = spl_token::instruction::close_account(
+        &spl_token::id(),
+        temp_token_account.key,
+        payer.key,
+        paycheck.key,
+        &[],
+    )?;
+
+    invoke_signed(
+        &close_account_ix,
+        &[
+            temp_token_account.clone(),
+            payer.clone(),
+            paycheck.clone(),
+        ],
+        &[&[
+            PAYCHECK_SEED,
+            &whirlpool.key.to_bytes(),
+            &args.creator.to_bytes(),
+            &[paycheck_data.bump],
+        ]],
+    )?;
+    // Update the paycheck account
+    let mut paycheck_account = paycheck.try_borrow_mut_data()?;
+    paycheck_data.last_executed = current_timestamp;
+    paycheck_data.serialize(&mut *paycheck_account)?;
     Ok(())
 }
 
