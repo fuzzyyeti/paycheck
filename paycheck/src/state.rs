@@ -11,9 +11,10 @@ pub struct Paycheck {
     pub amount: u64,
     pub whirlpool: Pubkey,
     pub tip: u64,
+    pub a_to_b: bool,
     pub bump: u8,
 }
 
 impl Paycheck {
-    pub const LEN: usize = 32 + 32 + 8 + 8 + 8 + 32 + 8 + 1;
+    pub const LEN: usize = 32 + 32 + 8 + 8 + 8 + 32 + 8 + 1 + 1;
 }

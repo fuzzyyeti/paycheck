@@ -22,6 +22,7 @@ pub struct CreatePaycheckArgs {
     pub amount: u64,
     pub tip: u64,
     pub whirlpool: Pubkey,
+    pub a_to_b: bool,
 }
 
 pub fn process_create_paycheck(

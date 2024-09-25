@@ -22,6 +22,7 @@ async fn test_create_paycheck() {
         amount: 8,
         whirlpool,
         tip: 8,
+        a_to_b: true,
     };
     let create_paycheck_ix =
         paycheck::instructions::create_paycheck::create_paycheck_ix(payer.pubkey(), args.clone())

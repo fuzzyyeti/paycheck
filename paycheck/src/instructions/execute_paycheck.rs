@@ -21,6 +21,7 @@ use whirlpools_state::{SwapArgs, Whirlpool};
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 pub struct ExecutePaycheckArgs {
     pub creator: Pubkey,
+    pub a_to_b: bool,
 }
 pub fn process_execute_paycheck(
     program_id: &Pubkey,
@@ -33,12 +34,12 @@ pub fn process_execute_paycheck(
     let whirlpool = next_account_info(account_info_iter)?;
     let treasury_mint = next_account_info(account_info_iter)?;
     let treasury_token_account = next_account_info(account_info_iter)?;
-    let treasury_vault_acocunt = next_account_info(account_info_iter)?;
     let temp_mint = next_account_info(account_info_iter)?;
     let temp_token_account = next_account_info(account_info_iter)?;
-    let temp_vault_account = next_account_info(account_info_iter)?;
     let receiver_token_account = next_account_info(account_info_iter)?;
     let payer_token_account = next_account_info(account_info_iter)?;
+    let token_vault_a = next_account_info(account_info_iter)?;
+    let token_vault_b = next_account_info(account_info_iter)?;
     let tick_array_0 = next_account_info(account_info_iter)?;
     let tick_array_1 = next_account_info(account_info_iter)?;
     let tick_array_2 = next_account_info(account_info_iter)?;
@@ -48,6 +49,9 @@ pub fn process_execute_paycheck(
     let whirlpool_data = Whirlpool::try_from_slice(&whirlpool.data.borrow())?;
     let paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck.data.borrow())?;
     let required_lamports = Rent::get()?.minimum_balance(Account::LEN);
+
+    // Mints come from the whirlpool make sure the input and output are correct
+    assert_eq!(paycheck_data.a_to_b, args.a_to_b);
 
     // Create a temp token account to hold the swap output
     let init_account_ix = solana_program::system_instruction::create_account(
@@ -89,8 +93,18 @@ pub fn process_execute_paycheck(
         other_amount_threshold: u64::MAX,
         sqrt_price_limit: 0,
         amount_specified_is_input: false,
-        a_to_b: true,
+        a_to_b: args.a_to_b,
         remaining_accounts_info: None,
+    };
+
+    let (
+        mint_a,
+        mint_b,
+        token_account_a,
+        token_account_b) = if args.a_to_b {
+        (treasury_mint, temp_mint, treasury_token_account, temp_token_account)
+    } else {
+        (temp_mint, treasury_mint, temp_token_account, treasury_token_account)
     };
 
     let swap_ix = Instruction::new_with_borsh(
@@ -102,12 +116,12 @@ pub fn process_execute_paycheck(
             AccountMeta::new_readonly(*memo_program.key, false),
             AccountMeta::new(*paycheck.key, true),
             AccountMeta::new(*whirlpool.key, false),
-            AccountMeta::new_readonly(*treasury_mint.key, false),
-            AccountMeta::new_readonly(*temp_mint.key, false),
-            AccountMeta::new(*treasury_token_account.key, false),
-            AccountMeta::new(*treasury_vault_acocunt.key, false),
-            AccountMeta::new(*temp_token_account.key, false),
-            AccountMeta::new(*temp_vault_account.key, false),
+            AccountMeta::new_readonly(*mint_a.key, false),
+            AccountMeta::new_readonly(*mint_b.key, false),
+            AccountMeta::new(*token_account_a.key, false),
+            AccountMeta::new(*token_vault_a.key, false),
+            AccountMeta::new(*token_account_b.key, false),
+            AccountMeta::new(*token_vault_b.key, false),
             AccountMeta::new(*tick_array_0.key, false),
             AccountMeta::new(*tick_array_1.key, false),
             AccountMeta::new(*tick_array_2.key, false),
@@ -123,12 +137,12 @@ pub fn process_execute_paycheck(
             memo_program.clone(),
             paycheck.clone(),
             whirlpool.clone(),
-            treasury_mint.clone(),
-            temp_mint.clone(),
-            treasury_token_account.clone(),
-            treasury_vault_acocunt.clone(),
-            temp_token_account.clone(),
-            temp_vault_account.clone(),
+            mint_a.clone(),
+            mint_b.clone(),
+            token_account_a.clone(),
+            token_vault_a.clone(),
+            token_account_b.clone(),
+            token_vault_b.clone(),
             tick_array_0.clone(),
             tick_array_1.clone(),
             tick_array_2.clone(),
@@ -159,12 +173,13 @@ pub fn execute_paycheck_ix(
     temp_mint: Pubkey,
     treasury_token_account: Pubkey,
     temp_token_account: Pubkey,
-    treasury_vault_acocunt: Pubkey,
-    temp_vault_account: Pubkey,
+    token_vault_a: Pubkey,
+    token_vault_b: Pubkey,
     tick_array_0: Pubkey,
     tick_array_1: Pubkey,
     tick_array_2: Pubkey,
     oracle: Pubkey,
+    a_to_b: bool,
 ) -> Result<Instruction, PaycheckProgramError> {
     let paycheck = Pubkey::find_program_address(
         &[PAYCHECK_SEED, &whirlpool.to_bytes(), &creator.to_bytes()],
@@ -173,7 +188,7 @@ pub fn execute_paycheck_ix(
     .0;
 
     let data = borsh::to_vec(&PaycheckInstructions::ExecutePaycheck(
-        ExecutePaycheckArgs { creator },
+        ExecutePaycheckArgs { creator, a_to_b },
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
 
@@ -188,12 +203,12 @@ pub fn execute_paycheck_ix(
             AccountMeta::new(whirlpool, false),
             AccountMeta::new(treasury_mint, false),
             AccountMeta::new(treasury_token_account, false),
-            AccountMeta::new(treasury_vault_acocunt, false),
             AccountMeta::new(temp_mint, false),
             AccountMeta::new(temp_token_account, true),
-            AccountMeta::new(temp_vault_account, false),
             AccountMeta::new(receiver_token_account, false),
             AccountMeta::new(payer_token_account, false),
+            AccountMeta::new(token_vault_a, false),
+            AccountMeta::new(token_vault_b, false),
             AccountMeta::new(tick_array_0, false),
             AccountMeta::new(tick_array_1, false),
             AccountMeta::new(tick_array_2, false),
