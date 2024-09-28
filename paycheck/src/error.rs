@@ -32,7 +32,9 @@ impl PrintProgramError for PaycheckProgramError {
     {
         match self {
             PaycheckProgramError::InvalidInstructionData => msg!("Error: Invalid instruction"),
-            PaycheckProgramError::IntervalNotPassed => msg!("Error: Must wait for interval before executing again"),
+            PaycheckProgramError::IntervalNotPassed => {
+                msg!("Error: Must wait for interval before executing again")
+            }
         }
     }
 }

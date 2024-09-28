@@ -1,13 +1,9 @@
 use solana_program::hash::Hash;
-use solana_program::program_option::COption;
-use solana_program::program_pack::Pack;
 use solana_program::pubkey;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::{processor, BanksClient, ProgramTest};
 use solana_sdk::account::Account;
 use solana_sdk::signature::{Keypair, Signer};
-use spl_token::state::AccountState;
-use whirlpools_state::TOKEN_PROGRAM_ID;
 
 pub const PROGRAM_ID: Pubkey = pubkey!("54oykPNNXxpXihbuU5H6j3MZmqCxaAdHALDvVYfzwnW4");
 
@@ -89,10 +85,5 @@ where
     );
 
     let (banks_client, payer, recent_blockhash) = program_test.start().await;
-    (
-        banks_client,
-        payer,
-        recent_blockhash,
-        owner,
-    )
+    (banks_client, payer, recent_blockhash, owner)
 }

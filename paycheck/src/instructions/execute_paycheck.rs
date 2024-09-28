@@ -4,6 +4,7 @@ use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
 use crate::ID;
 use borsh::{BorshDeserialize, BorshSerialize};
+use mpl_macros::assert_derivation_with_bump;
 use solana_program::account_info::{next_account_info, AccountInfo};
 use solana_program::clock::Clock;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -15,8 +16,7 @@ use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::state::Account;
-use mpl_macros::{assert_derivation, assert_derivation_with_bump};
-use whirlpools_state::{SwapArgs};
+use whirlpools_state::SwapArgs;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 pub struct ExecutePaycheckArgs {
@@ -112,14 +112,20 @@ pub fn process_execute_paycheck(
         remaining_accounts_info: None,
     };
 
-    let (
-        mint_a,
-        mint_b,
-        token_account_a,
-        token_account_b) = if args.a_to_b {
-        (treasury_mint, temp_mint, treasury_token_account, temp_token_account)
+    let (mint_a, mint_b, token_account_a, token_account_b) = if args.a_to_b {
+        (
+            treasury_mint,
+            temp_mint,
+            treasury_token_account,
+            temp_token_account,
+        )
     } else {
-        (temp_mint, treasury_mint, temp_token_account, treasury_token_account)
+        (
+            temp_mint,
+            treasury_mint,
+            temp_token_account,
+            treasury_token_account,
+        )
     };
 
     let swap_ix = Instruction::new_with_borsh(
@@ -231,11 +237,7 @@ pub fn process_execute_paycheck(
 
     invoke_signed(
         &close_account_ix,
-        &[
-            temp_token_account.clone(),
-            payer.clone(),
-            paycheck.clone(),
-        ],
+        &[temp_token_account.clone(), payer.clone(), paycheck.clone()],
         &[&[
             PAYCHECK_SEED,
             &whirlpool.key.to_bytes(),

@@ -1,18 +1,18 @@
 mod setup;
 
+use crate::setup::setup_program;
 use borsh::BorshDeserialize;
+use paycheck::instructions::CreatePaycheckArgs;
+use paycheck::state::Paycheck;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::tokio;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
-use paycheck::instructions::CreatePaycheckArgs;
-use paycheck::state::Paycheck;
-use crate::setup::{setup_program };
 
 #[tokio::test]
 async fn test_create_paycheck() {
     let program_id = paycheck::ID;
-    let (mut banks_client, payer, recent_blockhash, _) = setup_program(|_,_| {}).await;
+    let (mut banks_client, payer, recent_blockhash, _) = setup_program(|_, _| {}).await;
     let whirlpool = Pubkey::new_unique();
     let receiver = Pubkey::new_unique();
     let args = CreatePaycheckArgs {
@@ -76,4 +76,3 @@ async fn test_create_paycheck() {
         }
     }
 }
-

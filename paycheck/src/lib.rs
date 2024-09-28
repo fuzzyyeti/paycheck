@@ -1,5 +1,3 @@
-use solana_program::pubkey;
-use solana_program::pubkey::Pubkey;
 use solana_program::declare_id;
 
 pub mod consts;

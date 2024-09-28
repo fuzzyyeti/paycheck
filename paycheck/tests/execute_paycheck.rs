@@ -1,7 +1,13 @@
 mod setup;
 mod utils;
 
+use crate::setup::{setup_program, BSOL_MINT, USDC_MINT, WHIRLPOOL_ADDRESS};
+use crate::utils::check_balance;
 use borsh::BorshDeserialize;
+use paycheck::consts::PAYCHECK_SEED;
+use paycheck::instructions::execute_paycheck_ix;
+use paycheck::state::Paycheck;
+use paycheck::ID;
 use solana_program::program_option::COption;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -12,13 +18,7 @@ use solana_sdk::transaction::Transaction;
 use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
 use spl_token::state::AccountState;
-use paycheck::consts::PAYCHECK_SEED;
-use paycheck::ID;
-use paycheck::instructions::execute_paycheck_ix;
-use paycheck::state::Paycheck;
 use whirlpools_state::TOKEN_PROGRAM_ID;
-use crate::setup::{setup_program, BSOL_MINT, USDC_MINT, WHIRLPOOL_ADDRESS};
-use crate::utils::check_balance;
 #[tokio::test]
 async fn test_execute_paycheck() {
     let creator = Pubkey::new_unique();
@@ -32,7 +32,6 @@ async fn test_execute_paycheck() {
     );
     let receiver = Pubkey::new_unique();
     let (mut banks_client, payer, recent_blockhash, owner) = setup_program(|p, owner| {
-
         let receiver_ata = get_associated_token_address(&receiver, &USDC_MINT);
         let paycheck = Paycheck {
             creator,
@@ -56,7 +55,6 @@ async fn test_execute_paycheck() {
                 data,
             },
         );
-
 
         let receiver_token_account = spl_token::state::Account {
             mint: USDC_MINT,
@@ -91,14 +89,13 @@ async fn test_execute_paycheck() {
             delegated_amount: 100_000_000_000,
             close_authority: COption::None,
         };
-        let treasury_token_account_address =
-            get_associated_token_address(
-                owner,
-                &BSOL_MINT,
-            );
+        let treasury_token_account_address = get_associated_token_address(owner, &BSOL_MINT);
         let mut data: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
         treasury_token_account.pack_into_slice(&mut data);
-        println!("Treasury token account: {:?}", treasury_token_account_address);
+        println!(
+            "Treasury token account: {:?}",
+            treasury_token_account_address
+        );
         p.add_account(
             treasury_token_account_address,
             Account {
@@ -125,7 +122,10 @@ async fn test_execute_paycheck() {
         &[&payer],
         recent_blockhash,
     );
-    banks_client.process_transaction(create_accounts_tx).await.unwrap();
+    banks_client
+        .process_transaction(create_accounts_tx)
+        .await
+        .unwrap();
 
     let temp_token_account = Keypair::from_seed(&[1; 32]).unwrap();
 
@@ -212,7 +212,6 @@ async fn test_execute_paycheck() {
 async fn test_execute_paycheck_reverse() {
     let receiver = Pubkey::new_unique();
     let (mut banks_client, payer, recent_blockhash, owner) = setup_program(|p, owner| {
-
         let (paycheck_address, bump) = Pubkey::find_program_address(
             &[
                 PAYCHECK_SEED,
@@ -279,14 +278,13 @@ async fn test_execute_paycheck_reverse() {
             delegated_amount: 1_000_000_000,
             close_authority: COption::None,
         };
-        let treasury_token_account_address =
-            get_associated_token_address(
-                owner,
-                &USDC_MINT,
-            );
+        let treasury_token_account_address = get_associated_token_address(owner, &USDC_MINT);
         let mut data: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
         treasury_token_account.pack_into_slice(&mut data);
-        println!("Treasury token account: {:?}", treasury_token_account_address);
+        println!(
+            "Treasury token account: {:?}",
+            treasury_token_account_address
+        );
         p.add_account(
             treasury_token_account_address,
             Account {
@@ -297,7 +295,8 @@ async fn test_execute_paycheck_reverse() {
                 rent_epoch: 0,
             },
         );
-    }).await;
+    })
+    .await;
 
     let temp_token_account = Keypair::from_seed(&[1; 32]).unwrap();
     let receiver_token_account = get_associated_token_address(&receiver, &BSOL_MINT);
@@ -316,16 +315,22 @@ async fn test_execute_paycheck_reverse() {
         &[&payer],
         recent_blockhash,
     );
-    banks_client.process_transaction(create_accounts_tx).await.unwrap();
-    let pta = banks_client.get_account(payer_token_account).await.unwrap().unwrap();
+    banks_client
+        .process_transaction(create_accounts_tx)
+        .await
+        .unwrap();
+    let pta = banks_client
+        .get_account(payer_token_account)
+        .await
+        .unwrap()
+        .unwrap();
     println!("Payer token account: {:?} {:?}", payer_token_account, pta);
-
 
     let oracle = Pubkey::find_program_address(
         &[b"oracle", WHIRLPOOL_ADDRESS.as_ref()],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let whirlpool = whirlpools_state::Whirlpool::try_from_slice(
         &banks_client
             .get_account(WHIRLPOOL_ADDRESS)
@@ -334,7 +339,7 @@ async fn test_execute_paycheck_reverse() {
             .unwrap()
             .data,
     )
-        .unwrap();
+    .unwrap();
 
     let index_spacing = (whirlpool.tick_spacing as i32) * 88;
     let start_tick_index =
@@ -347,7 +352,7 @@ async fn test_execute_paycheck_reverse() {
         ],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let tick_array_1 = Pubkey::find_program_address(
         &[
             b"tick_array",
@@ -356,7 +361,7 @@ async fn test_execute_paycheck_reverse() {
         ],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let tick_array_2 = Pubkey::find_program_address(
         &[
             b"tick_array",
@@ -367,7 +372,7 @@ async fn test_execute_paycheck_reverse() {
         ],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     // Owners account delegated to the paycheck
     let treasury_token_account = get_associated_token_address(&owner.pubkey(), &USDC_MINT);
 
@@ -387,7 +392,8 @@ async fn test_execute_paycheck_reverse() {
         tick_array_2,
         oracle,
         false,
-    ).unwrap();
+    )
+    .unwrap();
     let cu_ix =
         solana_sdk::compute_budget::ComputeBudgetInstruction::set_compute_unit_limit(400_000);
     let tx = Transaction::new_signed_with_payer(
