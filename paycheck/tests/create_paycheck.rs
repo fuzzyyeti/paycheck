@@ -7,12 +7,11 @@ use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
 use paycheck::instructions::CreatePaycheckArgs;
 use paycheck::state::Paycheck;
-use crate::setup::{setup_program, PROGRAM_ID};
+use crate::setup::{setup_program };
 
 #[tokio::test]
 async fn test_create_paycheck() {
-    let program_id = PROGRAM_ID;
-    println!("program_id: {:?}", program_id);
+    let program_id = paycheck::ID;
     let (mut banks_client, payer, recent_blockhash, _) = setup_program(|_,_| {}).await;
     let whirlpool = Pubkey::new_unique();
     let receiver = Pubkey::new_unique();

@@ -12,7 +12,7 @@ use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{msg, system_instruction};
+use solana_program::{system_instruction};
 use solana_program::sysvar::Sysvar;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
@@ -86,14 +86,14 @@ pub fn process_create_paycheck(
 
 pub fn create_paycheck_ix(
     creator: Pubkey,
-    config_args: CreatePaycheckArgs,
+    create_payckeck_args: CreatePaycheckArgs,
 ) -> Result<Instruction, PaycheckProgramError> {
-    let data = borsh::to_vec(&PaycheckInstructions::CreatePaycheck(config_args.clone()))
+    let data = borsh::to_vec(&PaycheckInstructions::CreatePaycheck(create_payckeck_args.clone()))
         .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
     let paycheck_account = Pubkey::find_program_address(
         &[
             PAYCHECK_SEED,
-            &config_args.whirlpool.to_bytes(),
+            &create_payckeck_args.whirlpool.to_bytes(),
             &creator.to_bytes(),
         ],
         &ID,

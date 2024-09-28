@@ -15,7 +15,8 @@ use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::state::Account;
-use whirlpools_state::{SwapArgs, Whirlpool};
+use mpl_macros::{assert_derivation, assert_derivation_with_bump};
+use whirlpools_state::{SwapArgs};
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 pub struct ExecutePaycheckArgs {
@@ -49,6 +50,17 @@ pub fn process_execute_paycheck(
     let mut paycheck_data: Paycheck = Paycheck::try_from_slice(&paycheck.data.borrow())?;
     let required_lamports = Rent::get()?.minimum_balance(Account::LEN);
 
+    assert_derivation_with_bump(
+        program_id,
+        paycheck,
+        &[
+            PAYCHECK_SEED,
+            &paycheck_data.whirlpool.to_bytes(),
+            &paycheck_data.creator.to_bytes(),
+            &[paycheck_data.bump],
+        ],
+        ProgramError::InvalidSeeds,
+    )?;
     // Mints come from the whirlpool make sure the input and output are correct
     assert_eq!(paycheck_data.a_to_b, args.a_to_b);
 

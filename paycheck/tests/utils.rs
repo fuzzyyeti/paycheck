@@ -11,3 +11,14 @@ pub async fn check_balance(mut banks_client: &mut BanksClient, address: Pubkey, 
     println!("token_account amount: {:?}", token_account_data.amount);
     assert_eq!(token_account_data.amount, amount);
 }
+
+pub fn get_paycheck_address(owner: &Pubkey, whirlpool: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            b"paycheck",
+            whirlpool.as_ref(),
+            owner.as_ref(),
+        ],
+        &paycheck::ID,
+    )
+}
