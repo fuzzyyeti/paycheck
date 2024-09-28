@@ -15,7 +15,7 @@ pub const WHIRLPOOL_ADDRESS: Pubkey = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVz
 pub const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
 pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
-pub async fn setup_program<F>(mod_program: F) -> (BanksClient, Keypair, Hash, Keypair, Pubkey)
+pub async fn setup_program<F>(mod_program: F) -> (BanksClient, Keypair, Hash, Keypair)
 where
     F: FnOnce(&mut ProgramTest, &Pubkey) -> (),
 {
@@ -77,73 +77,6 @@ where
     let owner = Keypair::new();
     mod_program(&mut program_test, &owner.pubkey());
 
-    let token_account_a = spl_token::state::Account {
-        mint: BSOL_MINT,
-        owner: owner.pubkey(),
-        amount: 1000000,
-        delegate: COption::None,
-        state: AccountState::Initialized,
-        is_native: COption::None,
-        delegated_amount: 0,
-        close_authority: COption::None,
-    };
-    let token_account_address =
-        spl_associated_token_account::get_associated_token_address(&owner.pubkey(), &BSOL_MINT);
-    println!("Receiver owner: {:?}", owner.pubkey());
-    println!("Token account address: {:?}", token_account_address);
-    let mut data: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
-    token_account_a.pack_into_slice(&mut data);
-
-    program_test.add_account(
-        token_account_address,
-        Account {
-            lamports: 100000000,
-            data,
-            owner: TOKEN_PROGRAM_ID,
-            executable: false,
-            rent_epoch: 0,
-        },
-    );
-
-    let token_b_account_onwer = Pubkey::new_unique();
-    let token_account_b = spl_token::state::Account {
-        mint: USDC_MINT,
-        /// The owner of this account.
-        owner: token_b_account_onwer,
-        /// The amount of tokens this account holds.
-        amount: 1000000,
-        /// If `delegate` is `Some` then `delegated_amount` represents
-        /// the amount authorized by the delegate
-        delegate: COption::None,
-        /// The account's state
-        state: AccountState::Initialized,
-        /// If is_native.is_some, this is a native token, and the value logs the
-        /// rent-exempt reserve. An Account is required to be rent-exempt, so
-        /// the value is used by the Processor to ensure that wrapped SOL
-        /// accounts do not drop below this threshold.
-        is_native: COption::None,
-        /// The amount delegated
-        delegated_amount: 0,
-        /// Optional authority to close the account.
-        close_authority: COption::None,
-    };
-    let token_account_b_address = spl_associated_token_account::get_associated_token_address(
-        &token_b_account_onwer,
-        &USDC_MINT,
-    );
-    let mut data_b: Vec<u8> = vec![0; spl_token::state::Account::get_packed_len()];
-    token_account_b.pack_into_slice(&mut data_b);
-    program_test.add_account(
-        token_account_b_address,
-        Account {
-            lamports: 100000000,
-            data: data_b,
-            owner: TOKEN_PROGRAM_ID,
-            executable: false,
-            rent_epoch: 0,
-        },
-    );
-
     program_test.add_account(
         owner.pubkey(),
         Account {
@@ -161,6 +94,5 @@ where
         payer,
         recent_blockhash,
         owner,
-        token_account_b_address,
     )
 }

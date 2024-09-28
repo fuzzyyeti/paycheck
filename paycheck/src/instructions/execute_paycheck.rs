@@ -7,7 +7,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::{next_account_info, AccountInfo};
 use solana_program::clock::Clock;
 use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::msg;
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
@@ -29,6 +28,7 @@ pub fn process_execute_paycheck(
     args: ExecutePaycheckArgs,
 ) -> Result<(), ProgramError> {
     let account_info_iter = &mut accounts.iter();
+
     let payer = next_account_info(account_info_iter)?;
     let paycheck = next_account_info(account_info_iter)?;
     let whirlpool = next_account_info(account_info_iter)?;
@@ -240,6 +240,7 @@ pub fn process_execute_paycheck(
 
 pub fn execute_paycheck_ix(
     payer: Pubkey,
+    receiver_token_account: Pubkey,
     creator: Pubkey,
     whirlpool: Pubkey,
     treasury_mint: Pubkey,
@@ -265,8 +266,6 @@ pub fn execute_paycheck_ix(
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
 
-    let receiver_token_account = get_associated_token_address(&creator, &temp_mint);
-    println!("Receiver token account: {:?}", receiver_token_account);
     println!("Receiver token account owner: {:?}", creator);
     println!("Receiver mint: {:?}", temp_mint);
     let payer_token_account = get_associated_token_address(&payer, &temp_mint);
