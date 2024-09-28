@@ -1,10 +1,8 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey;
 use solana_program::pubkey::Pubkey;
-use std::cmp::Ordering;
 
 pub const ID: Pubkey = pubkey!("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc");
-const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 pub const TOKEN_PROGRAM_ID: Pubkey = pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 
@@ -98,11 +96,4 @@ pub struct SwapArgs {
     pub amount_specified_is_input: bool,
     pub a_to_b: bool,
     pub remaining_accounts_info: Option<RemainingAccountsInfo>,
-}
-
-pub fn is_a_to_b(mint: &Pubkey, mint_b: &Pubkey) -> bool {
-    match mint.to_bytes().cmp(&USDC_MINT.to_bytes()) {
-        Ordering::Less => true,
-        _ => false,
-    }
 }

@@ -2,7 +2,6 @@ mod setup;
 mod utils;
 
 use crate::setup::{setup_program, BSOL_MINT, USDC_MINT, WHIRLPOOL_ADDRESS};
-use crate::utils::check_balance;
 use borsh::BorshDeserialize;
 use paycheck::consts::PAYCHECK_SEED;
 use paycheck::instructions::execute_paycheck_ix;
@@ -19,6 +18,8 @@ use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
 use spl_token::state::AccountState;
 use whirlpools_state::TOKEN_PROGRAM_ID;
+use crate::utils::check_balance;
+
 #[tokio::test]
 async fn test_execute_paycheck() {
     let creator = Pubkey::new_unique();

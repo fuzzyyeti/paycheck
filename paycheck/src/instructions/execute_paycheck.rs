@@ -85,8 +85,8 @@ pub fn process_execute_paycheck(
     let create_account_ix = spl_token::instruction::initialize_account3(
         &spl_token::id(),
         temp_token_account.key,
-        &temp_mint.key,
-        &paycheck.key,
+        temp_mint.key,
+        paycheck.key,
     )?;
 
     invoke_signed(
@@ -182,7 +182,7 @@ pub fn process_execute_paycheck(
         &spl_token::id(),
         temp_token_account.key,
         receiver_token_account.key,
-        &paycheck.key,
+        paycheck.key,
         &[],
         paycheck_data.amount,
     )?;
@@ -206,7 +206,7 @@ pub fn process_execute_paycheck(
         &spl_token::id(),
         temp_token_account.key,
         payer_token_account.key,
-        &paycheck.key,
+        paycheck.key,
         &[],
         paycheck_data.tip,
     )?;
@@ -252,6 +252,7 @@ pub fn process_execute_paycheck(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_paycheck_ix(
     payer: Pubkey,
     receiver_token_account: Pubkey,
