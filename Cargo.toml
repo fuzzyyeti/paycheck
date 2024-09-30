@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "mpl-macros",
-    "paycheck"
-, "whirlpools-state"]
+    "paycheck",
+ 	"whirlpools-state",
+	"web"]
 resolver = "2"

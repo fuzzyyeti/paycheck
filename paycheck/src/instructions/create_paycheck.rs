@@ -70,6 +70,7 @@ pub fn process_create_paycheck(
     // Initialize the Paycheck account data
     let mut config_account = paycheck_account.try_borrow_mut_data()?;
     let mut paycheck_account_data = Paycheck::try_from_slice(&config_account)?;
+    paycheck_account_data.creator = *creator.key;
     paycheck_account_data.receiver = config_args.receiver;
     paycheck_account_data.increment = config_args.increment;
     paycheck_account_data.last_executed = 0;
