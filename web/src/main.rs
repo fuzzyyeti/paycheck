@@ -20,7 +20,7 @@ use crate::hooks::use_wallet_adapter::{
 
 mod hooks;
 
-pub const RPC_URL: &str = "http://127.0.0.1:8899"; // "https://junior-felicia-fast-mainnet.helius-rpc.com";
+pub const RPC_URL: &str = "http://127.0.0.1:8899";
 
 fn main() {
     // Init logger

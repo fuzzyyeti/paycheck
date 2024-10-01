@@ -1,0 +1,13 @@
+[package]
+name = "bot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+solana-sdk.workspace = true
+paycheck.workspace = true
+solana-client.workspace = true
+dotenv.workspace = true
+borsh.workspace = true
+spl-associated-token-account.workspace = true
+spl-token.workspace = true
