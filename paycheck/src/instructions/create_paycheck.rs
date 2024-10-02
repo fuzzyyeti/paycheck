@@ -79,6 +79,7 @@ pub fn process_create_paycheck(
     paycheck_account_data.whirlpool = config_args.whirlpool;
     paycheck_account_data.tip = config_args.tip;
     paycheck_account_data.bump = bump;
+    paycheck_account_data.a_to_b = config_args.a_to_b;
 
     // Save the updated data back to the account
     paycheck_account_data.serialize(&mut *config_account)?;

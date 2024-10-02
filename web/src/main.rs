@@ -12,6 +12,7 @@ use solana_extra_wasm::program::spl_associated_token_account::get_associated_tok
 use solana_extra_wasm::program::spl_associated_token_account::instruction::create_associated_token_account;
 use solana_extra_wasm::program::spl_token;
 use tracing::Level;
+use paycheck::paycheck_seeds;
 use paycheck::state::Paycheck;
 use crate::hooks::use_wallet_adapter::{
     invoke_signature, use_wallet_adapter, use_wallet_adapter_provider, InvokeSignatureStatus,
@@ -84,11 +85,12 @@ fn ShowPaychecks() -> Element {
             WalletAdapter::Connected { pubkey } => {
                 tracing::info!("connected the show paychecks {:?}", pubkey);
                 let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
-                let paycheck_address = Pubkey::find_program_address(
-                    &[b"paycheck",
-                        &whirlpool.to_bytes(),
-                        &pubkey.to_bytes()],
-                        &paycheck::id()).0;
+                let (paycheck_address, _) = Pubkey::find_program_address(
+                    paycheck_seeds!(
+                        whirlpool,
+                        pubkey,
+                        true
+                    ), &paycheck::ID);
 
                 let client = WasmClient::new(RPC_URL);
                 let paycheck_account = client.get_account(&paycheck_address).await;

@@ -4,6 +4,7 @@ use solana_sdk::pubkey::Pubkey;
 use dotenv::dotenv;
 use solana_sdk::signature::{Keypair, Signer};
 use spl_associated_token_account::get_associated_token_address;
+use spl_associated_token_account::instruction::create_associated_token_account;
 use paycheck::paycheck_seeds;
 use paycheck::state::Paycheck;
 pub const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
@@ -31,6 +32,7 @@ fn main() {
             true
         ),
         &paycheck::ID).0;
+    println!("{:?}", paycheck_address);
     let paycheck_account = client.get_account(&paycheck_address).unwrap();
     let paycheck = Paycheck::try_from_slice(paycheck_account.data.as_slice()).unwrap();
     let index_spacing = (whirlpool.tick_spacing as i32) * 88;
@@ -66,9 +68,62 @@ fn main() {
         &whirlpools_state::ID,
     ).0;
     println!("{:?}", paycheck);
-    let receiver_token_account = get_associated_token_address(
+    let receiver_token_account_address = get_associated_token_address(
+        &paycheck.receiver,
+        &USDC_MINT);
+
+    let receiver_token_account = client.get_account(&receiver_token_account_address);
+
+    match receiver_token_account {
+        Ok(_) => {
+            println!("Receiver token account exists");
+        }
+        Err(_) => {
+            let create_receiver_token_account_ix = create_associated_token_account(
+                &bot_key.pubkey(),
+                &paycheck.receiver,
+                &USDC_MINT,
+                &spl_token::id(),
+            );
+            let recent_blockhash = client.get_latest_blockhash().unwrap();
+            let ix = solana_sdk::transaction::Transaction::new_signed_with_payer(
+                &[create_receiver_token_account_ix],
+                Some(&bot_key.pubkey()),
+                &[&bot_key],
+                recent_blockhash,
+            );
+            let signature = client.send_and_confirm_transaction(&ix).unwrap();
+            println!("{:?}", signature);
+        }
+    }
+
+    let payer_token_account_address = get_associated_token_address(
         &bot_key.pubkey(),
-        &BSOL_MINT);
+        &USDC_MINT);
+    println!("{:?}", payer_token_account_address);
+    let payer_token_account = client.get_account(&payer_token_account_address);
+    match payer_token_account {
+        Ok(_) => {
+            println!("Payer token account exists");
+        }
+        Err(_) => {
+            let create_payer_token_account_ix = create_associated_token_account(
+                &bot_key.pubkey(),
+                &bot_key.pubkey(),
+                &USDC_MINT,
+                &spl_token::id(),
+            );
+            let recent_blockhash = client.get_latest_blockhash().unwrap();
+            let ix = solana_sdk::transaction::Transaction::new_signed_with_payer(
+                &[create_payer_token_account_ix],
+                Some(&bot_key.pubkey()),
+                &[&bot_key],
+                recent_blockhash,
+            );
+            let signature = client.send_and_confirm_transaction(&ix).unwrap();
+            println!("{:?}", signature);
+        }
+    }
 
     let temp_token_account = Keypair::new();
 
@@ -79,15 +134,17 @@ fn main() {
 
     let treasury_token_account = get_associated_token_address(
         &paycheck.creator,
-        &USDC_MINT);
+        &BSOL_MINT);
+
+    println!("treasury_token_account: {:?}", treasury_token_account);
 
     let execute_ix = paycheck::instructions::execute_paycheck_ix(
         bot_key.pubkey(),
-        receiver_token_account,
+        receiver_token_account_address,
         creator,
         whirlpool_address,
-        USDC_MINT,
         BSOL_MINT,
+        USDC_MINT,
         treasury_token_account,
         temp_token_account.pubkey(),
         whirlpool.token_vault_a,
@@ -107,5 +164,4 @@ fn main() {
     );
     let signature = client.send_and_confirm_transaction(&ix).unwrap();
     println!("{:?}", signature);
-    //     println!("{:?}", paycheck);
 }

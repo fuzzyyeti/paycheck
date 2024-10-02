@@ -285,8 +285,6 @@ pub fn execute_paycheck_ix(
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
 
-    println!("Receiver token account owner: {:?}", creator);
-    println!("Receiver mint: {:?}", temp_mint);
     let payer_token_account = get_associated_token_address(&payer, &temp_mint);
 
     Ok(Instruction {
