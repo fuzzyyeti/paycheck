@@ -1,40 +1,166 @@
 body {
-    background-color: #111216;
+    background-color:  #2e2e2e;
+    font-size: 20px;
+
+}
+
+h1 {
+    margin-top: 0;
 }
 
 #main {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
-}
-
-#links {
-    width: 400px;
-    text-align: left;
-    font-size: x-large;
-    color: white;
-    display: flex;
-    flex-direction: column;
-}
-
-#links a {
-    color: white;
-    text-decoration: none;
-    margin-top: 20px;
-    margin: 10px;
-    border: white 1px solid;
-    border-radius: 5px;
-    padding: 10px;
-}
-
-#links a:hover {
-    background-color: #1f1f1f;
-    cursor: pointer;
 }
 
 #header {
     max-width: 1200px;
+}
+.paycheck-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    height: 100vh;
+    background-color: #2e2e2e;
+}
+.paycheck-card {
+    position: relative;
+    background-color: #1e1e1e;
+    color: #00ffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    text-align: center;
+}
+.paycheck-card h2 {
+    margin-bottom: 20px;
+}
+.paycheck-card p {
+    margin: 10px 0;
+}
+.app-container {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Change this line */
+}
+.top-right {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.stacked {
+    margin-top: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+input {
+    margin-top: 5px;
+}
+
+input[type="number"] {
+    background-color: #1e1e1e;
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input[type="number"]::placeholder {
+    color: #00ffff;
+    opacity: 0.5;
+}
+
+input[type="number"]:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+
+button {
+    background-color: #00ffff;
+    color: #1e1e1e;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    margin: 10px 0;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+button:hover {
+    background-color: #00cccc;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+button:active {
+    background-color: #009999;
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+button:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.number-input-container {
+    display: flex;
+    gap: 4px;
+    justify-content: space-between;
+    align-items: center;
+}
+select {
+    background-color: #1e1e1e;
+    color: #00ffff;
+    border: 1px solid #00ffff;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+select:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+.paycheck-title {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 28px;
+    color: #00ffff;
+}
+.anton-sc-regular {
+    font-family: "Anton SC", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+/* Hide default arrows in numeric inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield; /* Firefox */
+}
+
+.trash-icon {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    cursor: pointer;
 }

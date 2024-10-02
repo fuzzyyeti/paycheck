@@ -1,23 +1,25 @@
 #![allow(non_snake_case)]
 
-use borsh::BorshDeserialize;
-use dioxus::prelude::*;
-use hooks::use_wallet_adapter::use_balance;
-use solana_client_wasm::{
-    solana_sdk::{native_token::lamports_to_sol, transaction::Transaction, pubkey::Pubkey},
-    WasmClient,
-};
-use solana_sdk::pubkey;
-use solana_extra_wasm::program::spl_associated_token_account::get_associated_token_address;
-use solana_extra_wasm::program::spl_associated_token_account::instruction::create_associated_token_account;
-use solana_extra_wasm::program::spl_token;
-use tracing::Level;
-use paycheck::paycheck_seeds;
-use paycheck::state::Paycheck;
 use crate::hooks::use_wallet_adapter::{
     invoke_signature, use_wallet_adapter, use_wallet_adapter_provider, InvokeSignatureStatus,
     WalletAdapter,
 };
+use borsh::BorshDeserialize;
+use chrono::{NaiveDateTime, TimeZone, Utc};
+use dioxus::prelude::*;
+use hooks::use_wallet_adapter::use_balance;
+use paycheck::paycheck_seeds;
+use paycheck::state::Paycheck;
+use solana_client_wasm::{
+    solana_sdk::{native_token::lamports_to_sol, pubkey::Pubkey, transaction::Transaction},
+    WasmClient,
+};
+use solana_extra_wasm::program::spl_associated_token_account::get_associated_token_address;
+use solana_extra_wasm::program::spl_associated_token_account::instruction::create_associated_token_account;
+use solana_extra_wasm::program::spl_token;
+use solana_sdk::clock::UnixTimestamp;
+use solana_sdk::pubkey;
+use tracing::Level;
 
 mod hooks;
 
@@ -32,10 +34,22 @@ fn main() {
 fn App() -> Element {
     use_wallet_adapter_provider();
     rsx! {
-        MountWalletAdapter {}
-        RenderBalance {}
-        SignMemo {}
-        ShowPaychecks {}
+        div {
+            class: "app-container",
+            div {
+                class: "anton-sc-regular paycheck-title",
+                h1 { "Paycheck" }
+            }
+            div {
+                class: "top-right",
+                MountWalletAdapter {}
+            }
+            div {
+                class: "stacked",
+                CreatePaycheck {}
+                ShowPaychecks {}
+            }
+        }
     }
 }
 
@@ -56,27 +70,6 @@ fn MountWalletAdapter() -> Element {
     })
 }
 
-fn RenderBalance() -> Element {
-    let balance = use_balance();
-    let e = match *balance.read() {
-        Some(bal) => {
-            rsx! {
-                div {
-                    "Balance: {lamports_to_sol(bal)} SOL"
-                }
-            }
-        }
-        None => {
-            rsx! {
-                div {
-                    "Loading balance"
-                }
-            }
-        }
-    };
-    e
-}
-
 fn ShowPaychecks() -> Element {
     let wallet_adapter = use_wallet_adapter();
     let tx = use_resource(move || async move {
@@ -86,11 +79,9 @@ fn ShowPaychecks() -> Element {
                 tracing::info!("connected the show paychecks {:?}", pubkey);
                 let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
                 let (paycheck_address, _) = Pubkey::find_program_address(
-                    paycheck_seeds!(
-                        whirlpool,
-                        pubkey,
-                        true
-                    ), &paycheck::ID);
+                    paycheck_seeds!(whirlpool, pubkey, true),
+                    &paycheck::ID,
+                );
 
                 let client = WasmClient::new(RPC_URL);
                 let paycheck_account = client.get_account(&paycheck_address).await;
@@ -98,27 +89,75 @@ fn ShowPaychecks() -> Element {
                 let result = match paycheck_account {
                     Ok(account) => {
                         tracing::info!("paycheck account 2 : {:?}", account);
-                        let data : Paycheck = Paycheck::try_from_slice(&account.data).unwrap();
+                        let data: Paycheck = Paycheck::try_from_slice(&account.data).unwrap();
                         Some(data)
                     }
-                    Err(_) => None
+                    Err(_) => None,
                 };
                 dioxus_logger::tracing::info!("paycheck data: {:?}", result);
 
-                Some("test")
+                result
             }
         }
     });
+    let increment_days = tx.read().as_ref()
+        .and_then(|opt| opt.as_ref()
+            .map(|paycheck| paycheck.increment / (24 * 60 * 60)));
+
+    let last_executed_date = tx.read().as_ref()
+        .and_then(|opt| opt.as_ref().map(|paycheck| {
+            match Utc.timestamp_opt(paycheck.last_executed, 0) {
+                chrono::LocalResult::Single(datetime) => datetime.format("%m-%d-%y").to_string(),
+                _ => "Invalid date".to_string(),
+            }
+        })).unwrap_or_else(|| "Invalid date".to_string());
+
+    let ui_amount = tx.read().as_ref()
+        .and_then(|opt| opt.as_ref().map(
+            |paycheck| (paycheck.amount as f64) / 1_000_000.0)).unwrap_or_else(|| {
+        tracing::error!("Error getting paycheck amount");
+        0.0
+    });
+
+    let ui_tip = tx.read().as_ref()
+        .and_then(|opt| opt.as_ref().map(
+            |paycheck| (paycheck.tip as f64) / 1_000_000.0)).unwrap_or_else(|| {
+        tracing::error!("Error getting paycheck tip");
+        0.0
+    });
+
     rsx! {
         div {
-            "Show paychecks 1"
+            if let Some(Some(paycheck)) = &*tx.read() {
+                div {
+                    class: "paycheck-card",
+                    h2 { "Paycheck Active" }
+                    p { "Converting your ORE to USDC and sending to"}
+                    p { "{paycheck.receiver}" }
+                    p {
+                        style: "margin-top: 3rem;",
+                        "Increment: {increment_days.unwrap()} days" }
+                    p { "Last Executed: {last_executed_date}" }
+                    p { "Amount: {ui_amount} USDC" }
+                    p { "Tip: {ui_tip} USDC" }
+                    div {
+                        class: "trash-icon",
+                        i { class: "fas fa-trash" }
+                    }
+                }
+            } else {
+                p { "Loading paycheck data..." }
+            }
         }
     }
 }
 
-fn SignMemo() -> Element {
+fn CreatePaycheck() -> Element {
     let status = use_signal(|| InvokeSignatureStatus::Start);
     let wallet_adapter = use_wallet_adapter();
+    let mut selected_days = use_signal(|| 1); // Default to 1 day
+    let mut amount = use_signal(|| 5.0); // Default amount
+    let mut tip = use_signal(|| 0.10); //
 
     let tx = use_resource(move || async move {
         match *wallet_adapter.read() {
@@ -128,23 +167,19 @@ fn SignMemo() -> Element {
                 let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
                 let bsol = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
                 let receiver_wallet = pubkey!("2qztb9WG2sGGArmKitC7wwCDMwHTLSVSyqvQCQGY4da5");
-                let receiver = get_associated_token_address(
-                    &receiver_wallet,
-                    &bsol);
-                // let create_receiver_ix = create_associated_token_account(
-                //     &pubkey,
-                //     receiver_wallet,
-                //     bsol,
-                //     &spl_token::id(),
-                // );
+                let receiver = get_associated_token_address(&receiver_wallet, &bsol);
+                let increment_seconds = selected_days * 24 * 60 * 60; // Convert days to seconds
+                let amount_usdc = (amount * 1_000_000.0) as u64;
+                let tip_usdc = (tip * 1_000_000.0) as u64;
+
                 let ix = paycheck::instructions::create_paycheck::create_paycheck_ix(
                     pubkey,
                     paycheck::instructions::create_paycheck::CreatePaycheckArgs {
                         receiver,
-                        increment: 8,
-                        amount: 1_000_000,
+                        increment: 60, // increment_seconds,
+                        amount: amount_usdc,
                         whirlpool,
-                        tip: 10_000,
+                        tip: tip_usdc,
                         a_to_b: true,
                     },
                 );
@@ -164,6 +199,51 @@ fn SignMemo() -> Element {
     });
 
     rsx! {
+        div {
+            class: "paycheck-card",
+        div {
+            label { "Select number of days for recurring trade & send: " }
+            select {
+                onchange: move |e| {
+                    let value = e.value().parse::<u64>().unwrap_or(1) as UnixTimestamp;
+                    *selected_days.write() = value;
+                },
+                option { value: "0", "0 days" }
+                option { value: "1", "1 day" }
+                option { value: "7", "1 week" }
+                option { value: "30", "1 month" }
+            }
+        }
+        div {
+                class: "number-input-container",
+                label { "Amount: " }
+                input {
+                    r#type: "number",
+                    value: "{amount}",
+                    oninput: move |e| {
+                        let value = e.value().parse::<f64>().unwrap_or(0.0);
+                        *amount.write() = value;
+                    }
+                }
+                span { " USDC" }
+            }
+            div {
+                class: "number-input-container",
+                label { "Tip: " }
+                input {
+                    r#type: "number",
+                    value: "{tip}",
+                    oninput: move |e| {
+                       if e.value().is_empty() {
+                       *tip.write() = 0.0;
+                        } else {
+                        let value = e.value().parse::<f64>().unwrap_or(0.0);
+                        *tip.write() = value;
+                        }
+                    }
+                }
+                span { " USDC" }
+            }
         if let Some(Some(tx)) = tx.cloned() {
             match *status.read() {
                 InvokeSignatureStatus::Start => rsx! {
@@ -184,5 +264,6 @@ fn SignMemo() -> Element {
                 "Loading tx"
             }
         }
+            }
     }
 }

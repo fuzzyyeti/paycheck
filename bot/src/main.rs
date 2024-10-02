@@ -7,8 +7,7 @@ use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
 use paycheck::paycheck_seeds;
 use paycheck::state::Paycheck;
-pub const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
-pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
 fn main() {
     dotenv().ok();
     let rpc_ulr = std::env::var("RPC").expect("RPC must be set");
@@ -39,6 +38,13 @@ fn main() {
     let start_tick_index =
         whirlpool.tick_current_index - (whirlpool.tick_current_index % index_spacing);
     let calc_next_index = |a: i32, b: i32| if paycheck.a_to_b { a - b } else { a + b };
+    let (input_mint, output_mint) = if paycheck.a_to_b {
+        (whirlpool.token_mint_a, whirlpool.token_mint_b)
+    } else {
+        (whirlpool.token_mint_b, whirlpool.token_mint_a)
+    };
+    println!("{:?}", input_mint);
+    println!("{:?}", output_mint);
 
     let tick_array_0 = Pubkey::find_program_address(
         &[
@@ -70,7 +76,7 @@ fn main() {
     println!("{:?}", paycheck);
     let receiver_token_account_address = get_associated_token_address(
         &paycheck.receiver,
-        &USDC_MINT);
+        &output_mint);
 
     let receiver_token_account = client.get_account(&receiver_token_account_address);
 
@@ -82,7 +88,7 @@ fn main() {
             let create_receiver_token_account_ix = create_associated_token_account(
                 &bot_key.pubkey(),
                 &paycheck.receiver,
-                &USDC_MINT,
+                &output_mint,
                 &spl_token::id(),
             );
             let recent_blockhash = client.get_latest_blockhash().unwrap();
@@ -99,7 +105,7 @@ fn main() {
 
     let payer_token_account_address = get_associated_token_address(
         &bot_key.pubkey(),
-        &USDC_MINT);
+        &output_mint);
     println!("{:?}", payer_token_account_address);
     let payer_token_account = client.get_account(&payer_token_account_address);
     match payer_token_account {
@@ -110,7 +116,7 @@ fn main() {
             let create_payer_token_account_ix = create_associated_token_account(
                 &bot_key.pubkey(),
                 &bot_key.pubkey(),
-                &USDC_MINT,
+                &output_mint,
                 &spl_token::id(),
             );
             let recent_blockhash = client.get_latest_blockhash().unwrap();
@@ -134,7 +140,7 @@ fn main() {
 
     let treasury_token_account = get_associated_token_address(
         &paycheck.creator,
-        &BSOL_MINT);
+        &input_mint);
 
     println!("treasury_token_account: {:?}", treasury_token_account);
 
@@ -143,8 +149,8 @@ fn main() {
         receiver_token_account_address,
         creator,
         whirlpool_address,
-        BSOL_MINT,
-        USDC_MINT,
+        input_mint,
+        output_mint,
         treasury_token_account,
         temp_token_account.pubkey(),
         whirlpool.token_vault_a,
