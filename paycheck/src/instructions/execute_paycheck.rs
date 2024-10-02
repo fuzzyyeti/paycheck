@@ -1,8 +1,8 @@
-use crate::consts::{MEMO_PROGRAM_ID, PAYCHECK_SEED, SWAP_DISCRIMINATOR};
+use crate::consts::{MEMO_PROGRAM_ID, PAYCHECK_SEED,SWAP_DISCRIMINATOR};
 use crate::error::PaycheckProgramError;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
-use crate::ID;
+use crate::{paycheck_seeds,paycheck_seeds_with_bump, ID};
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_macros::assert_derivation_with_bump;
 use solana_program::account_info::{next_account_info, AccountInfo};
@@ -53,12 +53,12 @@ pub fn process_execute_paycheck(
     assert_derivation_with_bump(
         program_id,
         paycheck,
-        &[
-            PAYCHECK_SEED,
-            &paycheck_data.whirlpool.to_bytes(),
-            &paycheck_data.creator.to_bytes(),
-            &[paycheck_data.bump],
-        ],
+        paycheck_seeds_with_bump!(
+            paycheck_data.whirlpool,
+            paycheck_data.creator,
+            paycheck_data.a_to_b,
+            paycheck_data.bump
+        ),
         ProgramError::InvalidSeeds,
     )?;
     // Mints come from the whirlpool make sure the input and output are correct
@@ -92,12 +92,12 @@ pub fn process_execute_paycheck(
     invoke_signed(
         &create_account_ix,
         &[temp_token_account.clone(), temp_mint.clone()],
-        &[&[
-            PAYCHECK_SEED,
-            &whirlpool.key.to_bytes(),
-            &args.creator.to_bytes(),
-            &[paycheck_data.bump],
-        ]],
+        &[paycheck_seeds_with_bump!(
+            paycheck_data.whirlpool,
+            paycheck_data.creator,
+            paycheck_data.a_to_b,
+            paycheck_data.bump
+        )],
     )?;
 
     // Perform the swap
@@ -169,12 +169,12 @@ pub fn process_execute_paycheck(
             tick_array_2.clone(),
             oracle.clone(),
         ],
-        &[&[
-            PAYCHECK_SEED,
-            &whirlpool.key.to_bytes(),
-            &args.creator.to_bytes(),
-            &[paycheck_data.bump],
-        ]],
+        &[paycheck_seeds_with_bump!(
+            paycheck_data.whirlpool,
+            paycheck_data.creator,
+            paycheck_data.a_to_b,
+            paycheck_data.bump
+        )],
     )?;
 
     // Send the output to the receiver and executor
@@ -194,12 +194,12 @@ pub fn process_execute_paycheck(
             receiver_token_account.clone(),
             paycheck.clone(),
         ],
-        &[&[
-            PAYCHECK_SEED,
-            &whirlpool.key.to_bytes(),
-            &args.creator.to_bytes(),
-            &[paycheck_data.bump],
-        ]],
+        &[paycheck_seeds_with_bump!(
+            paycheck_data.whirlpool,
+            paycheck_data.creator,
+            paycheck_data.a_to_b,
+            paycheck_data.bump
+        )]
     )?;
 
     let transfer_ix = spl_token::instruction::transfer(
@@ -218,12 +218,12 @@ pub fn process_execute_paycheck(
             payer_token_account.clone(),
             paycheck.clone(),
         ],
-        &[&[
-            PAYCHECK_SEED,
-            &whirlpool.key.to_bytes(),
-            &args.creator.to_bytes(),
-            &[paycheck_data.bump],
-        ]],
+        &[paycheck_seeds_with_bump!(
+            paycheck_data.whirlpool,
+            paycheck_data.creator,
+            paycheck_data.a_to_b,
+            paycheck_data.bump
+        )]
     )?;
 
     // Close the temp token account
@@ -238,12 +238,12 @@ pub fn process_execute_paycheck(
     invoke_signed(
         &close_account_ix,
         &[temp_token_account.clone(), payer.clone(), paycheck.clone()],
-        &[&[
-            PAYCHECK_SEED,
-            &whirlpool.key.to_bytes(),
-            &args.creator.to_bytes(),
-            &[paycheck_data.bump],
-        ]],
+        &[paycheck_seeds_with_bump!(
+            paycheck_data.whirlpool,
+            paycheck_data.creator,
+            paycheck_data.a_to_b,
+            paycheck_data.bump
+        )],
     )?;
     // Update the paycheck account
     let mut paycheck_account = paycheck.try_borrow_mut_data()?;
@@ -271,7 +271,11 @@ pub fn execute_paycheck_ix(
     a_to_b: bool,
 ) -> Result<Instruction, PaycheckProgramError> {
     let paycheck = Pubkey::find_program_address(
-        &[PAYCHECK_SEED, &whirlpool.to_bytes(), &creator.to_bytes()],
+        paycheck_seeds!(
+            whirlpool,
+            creator,
+            a_to_b
+        ),
         &ID,
     )
     .0;

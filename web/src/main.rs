@@ -143,7 +143,7 @@ fn SignMemo() -> Element {
                         amount: 1_000_000,
                         whirlpool,
                         tip: 10_000,
-                        a_to_b: false,
+                        a_to_b: true,
                     },
                 );
                 match ix {

@@ -15,7 +15,7 @@ spl-associated-token-account.workspace = true
 thiserror = "1.0.63"
 num-traits = "0.2.19"
 mpl-macros = { path = "../mpl-macros" }
-whirlpools-state = { path = "../whirlpools-state" }
+whirlpools-state.workspace = true
 
 [dev-dependencies]
 solana-program-test = "1.18"

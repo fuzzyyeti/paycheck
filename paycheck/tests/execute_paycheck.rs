@@ -3,10 +3,9 @@ mod utils;
 
 use crate::setup::{setup_program, BSOL_MINT, USDC_MINT, WHIRLPOOL_ADDRESS};
 use borsh::BorshDeserialize;
-use paycheck::consts::PAYCHECK_SEED;
 use paycheck::instructions::execute_paycheck_ix;
 use paycheck::state::Paycheck;
-use paycheck::ID;
+use paycheck::{paycheck_seeds, ID};
 use solana_program::program_option::COption;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -24,11 +23,11 @@ use crate::utils::check_balance;
 async fn test_execute_paycheck() {
     let creator = Pubkey::new_unique();
     let (paycheck_address, bump) = Pubkey::find_program_address(
-        &[
-            PAYCHECK_SEED,
-            &WHIRLPOOL_ADDRESS.to_bytes(),
-            &creator.to_bytes(),
-        ],
+        paycheck_seeds!(
+            WHIRLPOOL_ADDRESS,
+            creator,
+            true
+        ),
         &ID,
     );
     let receiver = Pubkey::new_unique();
@@ -214,11 +213,11 @@ async fn test_execute_paycheck_reverse() {
     let receiver = Pubkey::new_unique();
     let (mut banks_client, payer, recent_blockhash, owner) = setup_program(|p, owner| {
         let (paycheck_address, bump) = Pubkey::find_program_address(
-            &[
-                PAYCHECK_SEED,
-                &WHIRLPOOL_ADDRESS.to_bytes(),
-                &owner.to_bytes(),
-            ],
+            paycheck_seeds!(
+                WHIRLPOOL_ADDRESS,
+                owner,
+                false
+            ),
             &ID,
         );
 

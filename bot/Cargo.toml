@@ -11,3 +11,4 @@ dotenv.workspace = true
 borsh.workspace = true
 spl-associated-token-account.workspace = true
 spl-token.workspace = true
+whirlpools-state.workspace = true

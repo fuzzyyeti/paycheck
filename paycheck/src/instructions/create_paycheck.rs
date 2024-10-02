@@ -1,8 +1,8 @@
-use crate::consts::PAYCHECK_SEED;
 use crate::error::PaycheckProgramError;
+use crate::consts::PAYCHECK_SEED;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
-use crate::ID;
+use crate::{paycheck_seeds, paycheck_seeds_with_bump, ID};
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_macros::{assert_derivation, assert_signer};
 use solana_program::account_info::{next_account_info, AccountInfo};
@@ -12,7 +12,7 @@ use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_instruction;
+use solana_program::{msg, system_instruction};
 use solana_program::sysvar::Sysvar;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
@@ -39,13 +39,14 @@ pub fn process_create_paycheck(
     let bump = assert_derivation(
         program_id,
         paycheck_account,
-        &[
-            PAYCHECK_SEED,
-            &config_args.whirlpool.to_bytes(),
-            &creator.key.to_bytes(),
-        ],
+        paycheck_seeds!(
+            config_args.whirlpool,
+            creator.key,
+            config_args.a_to_b
+        ),
         ProgramError::InvalidSeeds,
     )?;
+    msg!("got here");
     let rent = Rent::get()?;
     let required_lamports = rent.minimum_balance(Paycheck::LEN);
 
@@ -59,12 +60,12 @@ pub fn process_create_paycheck(
             program_id,
         ),
         &[creator.clone(), paycheck_account.clone()],
-        &[&[
-            PAYCHECK_SEED,
-            &config_args.whirlpool.to_bytes(),
-            &creator.key.to_bytes(),
-            &[bump],
-        ]],
+        &[paycheck_seeds_with_bump!(
+            config_args.whirlpool,
+            creator.key,
+            config_args.a_to_b,
+            bump
+            )],
     )?;
 
     // Initialize the Paycheck account data
@@ -94,11 +95,11 @@ pub fn create_paycheck_ix(
     ))
     .map_err(|_| PaycheckProgramError::InvalidInstructionData)?;
     let paycheck_account = Pubkey::find_program_address(
-        &[
-            PAYCHECK_SEED,
-            &create_payckeck_args.whirlpool.to_bytes(),
-            &creator.to_bytes(),
-        ],
+        paycheck_seeds!(
+            create_payckeck_args.whirlpool,
+            creator,
+            create_payckeck_args.a_to_b
+        ),
         &ID,
     )
     .0;

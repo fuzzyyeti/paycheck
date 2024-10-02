@@ -10,11 +10,3 @@ pub async fn check_balance(banks_client: &mut BanksClient, address: Pubkey, amou
     assert_eq!(token_account_data.amount, amount);
 }
 
-// Not sure why the compiler thinks this is dead code
-#[allow(dead_code)]
-pub fn get_paycheck_address(owner: &Pubkey, whirlpool: &Pubkey) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
-        &[b"paycheck", whirlpool.as_ref(), owner.as_ref()],
-        &paycheck::ID,
-    )
-}

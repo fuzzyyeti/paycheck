@@ -2,18 +2,21 @@ mod setup;
 mod utils;
 
 use crate::setup::{setup_program, PROGRAM_ID, WHIRLPOOL_ADDRESS};
-use crate::utils::get_paycheck_address;
 use paycheck::state::Paycheck;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::tokio;
 use solana_sdk::account::Account;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
+use paycheck::paycheck_seeds;
 
 #[tokio::test]
 async fn test_create_paycheck() {
     let (mut banks_client, payer, recent_blockhash, owner) = setup_program(|p, owner| {
-        let (paycheck_address, bump) = get_paycheck_address(owner, &WHIRLPOOL_ADDRESS);
+        let (paycheck_address, bump) = Pubkey::find_program_address(
+            paycheck_seeds!(WHIRLPOOL_ADDRESS, owner, true),
+            &PROGRAM_ID,
+        );
 
         let paycheck = Paycheck {
             creator: *owner,
@@ -37,9 +40,12 @@ async fn test_create_paycheck() {
                 data,
             },
         );
-    })
-    .await;
-    let (paycheck_address, _) = get_paycheck_address(&owner.pubkey(), &WHIRLPOOL_ADDRESS);
+    }).await;
+
+    let (paycheck_address, bump) = Pubkey::find_program_address(
+        paycheck_seeds!(WHIRLPOOL_ADDRESS, owner.pubkey(), true),
+        &PROGRAM_ID,
+    );
     let close_paycheck_ix = paycheck::instructions::close_paycheck::create_close_paycheck_ix(
         owner.pubkey(),
         paycheck_address,

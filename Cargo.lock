@@ -836,6 +836,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account 3.0.4",
  "spl-token 3.5.0",
+ "whirlpools-state",
 ]
 
 [[package]]

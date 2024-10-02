@@ -8,6 +8,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program_test::tokio;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
+use paycheck::paycheck_seeds;
 
 #[tokio::test]
 async fn test_create_paycheck() {
@@ -26,6 +27,7 @@ async fn test_create_paycheck() {
     let create_paycheck_ix =
         paycheck::instructions::create_paycheck::create_paycheck_ix(payer.pubkey(), args.clone())
             .unwrap();
+
     println!("create_config_ix: {:?}", create_paycheck_ix);
     let transaction = Transaction::new_signed_with_payer(
         &[create_paycheck_ix],
@@ -39,13 +41,12 @@ async fn test_create_paycheck() {
         Ok(_) => {
             println!("Transaction processed successfully");
 
-            // Find the Paycheck account PDA with correct seeds
             let (paycheck_pda, _) = Pubkey::find_program_address(
-                &[
-                    b"paycheck",
-                    args.whirlpool.as_ref(),
-                    payer.pubkey().as_ref(),
-                ],
+                paycheck_seeds!(
+                    args.whirlpool,
+                    payer.pubkey(),
+                    args.a_to_b
+                ),
                 &program_id,
             );
 
