@@ -71,7 +71,7 @@ input {
     border-radius: 5px;
     padding: 10px;
     margin: 10px 0;
-    width: 100%;
+    width: 300px;
     box-sizing: border-box;
 }
 
@@ -113,12 +113,21 @@ button:focus {
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
-.number-input-container {
+.input-label {
+    width: 100px;
+    text-align: left;
+}
+.interval-label {
+    width: 250px;
+    text-align: left;
+}
+.input-container {
     display: flex;
     gap: 4px;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
 }
+
 select {
     background-color: #1e1e1e;
     color: #00ffff;
@@ -126,7 +135,7 @@ select {
     border-radius: 5px;
     padding: 10px;
     margin: 10px 0;
-    width: 100%;
+    width: 150px;
     box-sizing: border-box;
 }
 

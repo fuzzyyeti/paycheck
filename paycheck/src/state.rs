@@ -2,7 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::clock::UnixTimestamp;
 use solana_program::pubkey::Pubkey;
 
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Debug, PartialEq, Clone)]
 pub struct Paycheck {
     pub creator: Pubkey,
     pub receiver: Pubkey,

@@ -12,7 +12,7 @@ use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{msg, system_instruction};
+use solana_program::{system_instruction};
 use solana_program::sysvar::Sysvar;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, Clone)]
@@ -36,6 +36,15 @@ pub fn process_create_paycheck(
 
     assert_signer(creator)?;
 
+    let expected_paycheck_account = Pubkey::find_program_address(
+        paycheck_seeds!(
+            config_args.whirlpool,
+            *creator.key,
+           true
+        ),
+        program_id,
+    );
+
     let bump = assert_derivation(
         program_id,
         paycheck_account,
@@ -46,7 +55,6 @@ pub fn process_create_paycheck(
         ),
         ProgramError::InvalidSeeds,
     )?;
-    msg!("got here");
     let rent = Rent::get()?;
     let required_lamports = rent.minimum_balance(Paycheck::LEN);
 
@@ -102,8 +110,7 @@ pub fn create_paycheck_ix(
             create_payckeck_args.a_to_b
         ),
         &ID,
-    )
-    .0;
+    ).0;
 
     Ok(Instruction {
         program_id: ID,
