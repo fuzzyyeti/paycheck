@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use std::str::FromStr;
 use crate::hooks::use_wallet_adapter::{
     invoke_signature, use_wallet_adapter, use_wallet_adapter_provider, InvokeSignatureStatus,
     WalletAdapter,
@@ -158,6 +159,7 @@ fn CreatePaycheck() -> Element {
     let mut selected_days = use_signal(|| 1); // Default to 1 day
     let mut amount = use_signal(|| 5.0); // Default amount
     let mut tip = use_signal(|| 0.10); //
+    let mut receiver = use_signal(|| String::new());
 
     let tx = use_resource(move || async move {
         match *wallet_adapter.read() {
@@ -166,17 +168,22 @@ fn CreatePaycheck() -> Element {
                 let rpc = WasmClient::new(RPC_URL);
                 let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
                 let bsol = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
+                let usdc = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
                 let receiver_wallet = pubkey!("2qztb9WG2sGGArmKitC7wwCDMwHTLSVSyqvQCQGY4da5");
-                let receiver = get_associated_token_address(&receiver_wallet, &bsol);
                 let increment_seconds = selected_days * 24 * 60 * 60; // Convert days to seconds
                 let amount_usdc = (amount * 1_000_000.0) as u64;
                 let tip_usdc = (tip * 1_000_000.0) as u64;
 
+                dioxus_logger::tracing::info!("Trying to get receiver {:?}", &receiver.read());
+                let receiver_pubkey = Pubkey::from_str(&receiver.read()).unwrap_or(pubkey);
+                // dioxus_logger::tracing::info!("Receiver pubkey: {:?}", receiver_pubkey);
+                // let receiver_token_address = get_associated_token_address(&receiver_pubkey, &usdc);
+
                 let ix = paycheck::instructions::create_paycheck::create_paycheck_ix(
                     pubkey,
                     paycheck::instructions::create_paycheck::CreatePaycheckArgs {
-                        receiver,
-                        increment: 60, // increment_seconds,
+                        receiver: receiver_pubkey,
+                        increment: increment_seconds,
                         amount: amount_usdc,
                         whirlpool,
                         tip: tip_usdc,
@@ -186,7 +193,14 @@ fn CreatePaycheck() -> Element {
                 match ix {
                     Ok(ix) => {
                         let mut tx = Transaction::new_with_payer(&[ix], Some(&pubkey));
-                        tx.message.recent_blockhash = rpc.get_latest_blockhash().await.unwrap();
+                        let latest_blockhash = match rpc.get_latest_blockhash().await {
+                            Ok(blockhash) => blockhash,
+                            Err(err) => {
+                                dioxus_logger::tracing::error!("Error getting latest blockhash: {:?}", err);
+                                return None;
+                            }
+                        };
+                        tx.message.recent_blockhash = latest_blockhash;
                         Some(tx)
                     }
                     Err(err) => {
@@ -213,6 +227,17 @@ fn CreatePaycheck() -> Element {
                 option { value: "7", "1 week" }
                 option { value: "30", "1 month" }
             }
+        }
+        div {
+                class: "text-input-container",
+                label { "Receiver: " }
+                input {
+                    r#type: "text",
+                    value: "{receiver}",
+                    oninput: move |e| {
+                        *receiver.write() = e.value().clone().to_string();
+                    }
+                }
         }
         div {
                 class: "number-input-container",
