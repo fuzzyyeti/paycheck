@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 
-use std::str::FromStr;
 use crate::hooks::use_wallet_adapter::{
     invoke_signature, use_wallet_adapter, use_wallet_adapter_provider, InvokeSignatureStatus,
     WalletAdapter,
@@ -18,6 +17,7 @@ use solana_extra_wasm::program::spl_associated_token_account::get_associated_tok
 use solana_extra_wasm::program::spl_token;
 use solana_sdk::clock::UnixTimestamp;
 use solana_sdk::pubkey;
+use std::str::FromStr;
 use tracing::Level;
 
 mod hooks;
@@ -51,7 +51,7 @@ fn App() -> Element {
 
                 let client = WasmClient::new(RPC_URL);
                 let paycheck_account = client.get_account(&paycheck_address).await;
-                
+
                 match paycheck_account {
                     Ok(account) => {
                         let data: Paycheck = Paycheck::try_from_slice(&account.data).unwrap();
@@ -146,7 +146,10 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
                         let latest_blockhash = match client.get_latest_blockhash().await {
                             Ok(blockhash) => blockhash,
                             Err(err) => {
-                                dioxus_logger::tracing::error!("Error getting latest blockhash: {:?}", err);
+                                dioxus_logger::tracing::error!(
+                                    "Error getting latest blockhash: {:?}",
+                                    err
+                                );
                                 return None;
                             }
                         };
@@ -164,8 +167,8 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
     let increment_days = paycheck.increment / (24 * 60 * 60);
 
     let last_executed_date = match Utc.timestamp_opt(paycheck.last_executed, 0) {
-                chrono::LocalResult::Single(datetime) => datetime.format("%m-%d-%y").to_string(),
-                _ => "Invalid date".to_string(),
+        chrono::LocalResult::Single(datetime) => datetime.format("%m-%d-%y").to_string(),
+        _ => "Invalid date".to_string(),
     };
 
     let ui_amount = paycheck.amount as f64 / 1_000_000.0;
@@ -233,7 +236,8 @@ fn CreatePaycheck() -> Element {
                 let paycheck = Pubkey::find_program_address(
                     paycheck_seeds!(whirlpool, pubkey, true),
                     &paycheck::ID,
-                ).0;
+                )
+                .0;
 
                 let delegate_ix = match spl_token::instruction::approve(
                     &spl_token::ID,
@@ -267,7 +271,7 @@ fn CreatePaycheck() -> Element {
                         return None;
                     }
                 };
-                let mut tx = Transaction::new_with_payer(&[delegate_ix,ix], Some(&pubkey));
+                let mut tx = Transaction::new_with_payer(&[delegate_ix, ix], Some(&pubkey));
                 let latest_blockhash = match rpc.get_latest_blockhash().await {
                     Ok(blockhash) => blockhash,
                     Err(err) => {

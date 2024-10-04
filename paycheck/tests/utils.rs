@@ -9,4 +9,3 @@ pub async fn check_balance(banks_client: &mut BanksClient, address: Pubkey, amou
     let token_account_data = spl_token::state::Account::unpack(&token_account.data).unwrap();
     assert_eq!(token_account_data.amount, amount);
 }
-

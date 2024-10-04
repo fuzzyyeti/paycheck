@@ -1,17 +1,17 @@
 use borsh::BorshDeserialize;
 use chrono::Utc;
-use solana_sdk::pubkey;
-use solana_sdk::pubkey::Pubkey;
 use dotenv::dotenv;
+use paycheck::state::Paycheck;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcAccountInfoConfig;
 use solana_client::rpc_filter::RpcFilterType;
 use solana_sdk::program_pack::Pack;
+use solana_sdk::pubkey;
+use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
 use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
-use paycheck::state::Paycheck;
 
 fn main() {
     dotenv().ok();
@@ -26,26 +26,23 @@ fn main() {
         &paycheck::ID,
         solana_client::rpc_config::RpcProgramAccountsConfig {
             filters: Some(vec![
-               // Check that it is SolBlze/USDC
-                RpcFilterType::Memcmp(
-                solana_client::rpc_filter::Memcmp::new_raw_bytes(
+                // Check that it is SolBlze/USDC
+                RpcFilterType::Memcmp(solana_client::rpc_filter::Memcmp::new_raw_bytes(
                     88,
-                    binary_wp_address
+                    binary_wp_address,
                 )),
                 // Check that it is a_b
-                RpcFilterType::Memcmp(
-                    solana_client::rpc_filter::Memcmp::new_raw_bytes(
-                        128,
-                        1u8.to_le_bytes().to_vec()
-                    )
-                )
+                RpcFilterType::Memcmp(solana_client::rpc_filter::Memcmp::new_raw_bytes(
+                    128,
+                    1u8.to_le_bytes().to_vec(),
+                )),
             ]),
             account_config: RpcAccountInfoConfig {
                 encoding: Some(UiAccountEncoding::Base64),
                 ..RpcAccountInfoConfig::default()
             },
             with_context: None,
-        }
+        },
     ) {
         Ok(accounts) => accounts,
         Err(e) => {
@@ -72,11 +69,14 @@ fn main() {
             }
         }
     }
-
-
 }
 
-fn check_sufficient_balance(client: &RpcClient, owner: &Pubkey, mint: &Pubkey, paycheck: &Paycheck) -> bool {
+fn check_sufficient_balance(
+    client: &RpcClient,
+    owner: &Pubkey,
+    mint: &Pubkey,
+    paycheck: &Paycheck,
+) -> bool {
     let amount_needed = paycheck.amount + paycheck.tip;
     let ata_address = get_associated_token_address(owner, mint);
     let ata_account = match client.get_account(&ata_address) {
@@ -86,15 +86,15 @@ fn check_sufficient_balance(client: &RpcClient, owner: &Pubkey, mint: &Pubkey, p
             return false;
         }
     };
-    let ata_data = spl_token::state::Account::unpack_from_slice(ata_account.data.as_slice()).unwrap();
+    let ata_data =
+        spl_token::state::Account::unpack_from_slice(ata_account.data.as_slice()).unwrap();
     ata_data.amount >= amount_needed && ata_data.delegated_amount >= amount_needed
 }
 
 fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
     let whirlpool_account = client.get_account(&paycheck.whirlpool).unwrap();
-    let whirlpool = whirlpools_state::Whirlpool::try_from_slice(
-        whirlpool_account.data.as_slice()
-    ).unwrap();
+    let whirlpool =
+        whirlpools_state::Whirlpool::try_from_slice(whirlpool_account.data.as_slice()).unwrap();
     let (input_mint, output_mint) = if paycheck.a_to_b {
         (whirlpool.token_mint_a, whirlpool.token_mint_b)
     } else {
@@ -117,15 +117,18 @@ fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
         ],
         &whirlpools_state::ID,
     )
-        .0;
+    .0;
     let tick_array_1 = Pubkey::find_program_address(
         &[
             b"tick_array",
             paycheck.whirlpool.as_ref(),
-            calc_next_index(start_tick_index, index_spacing).to_string().as_bytes(),
+            calc_next_index(start_tick_index, index_spacing)
+                .to_string()
+                .as_bytes(),
         ],
         &whirlpools_state::ID,
-    ).0;
+    )
+    .0;
     let tick_array_2 = Pubkey::find_program_address(
         &[
             b"tick_array",
@@ -135,11 +138,11 @@ fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
                 .as_bytes(),
         ],
         &whirlpools_state::ID,
-    ).0;
+    )
+    .0;
     println!("{:?}", paycheck);
-    let receiver_token_account_address = get_associated_token_address(
-        &paycheck.receiver,
-        &output_mint);
+    let receiver_token_account_address =
+        get_associated_token_address(&paycheck.receiver, &output_mint);
 
     let receiver_token_account = client.get_account(&receiver_token_account_address);
 
@@ -166,9 +169,7 @@ fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
         }
     }
 
-    let payer_token_account_address = get_associated_token_address(
-        &bot_key.pubkey(),
-        &output_mint);
+    let payer_token_account_address = get_associated_token_address(&bot_key.pubkey(), &output_mint);
     println!("{:?}", payer_token_account_address);
     let payer_token_account = client.get_account(&payer_token_account_address);
     match payer_token_account {
@@ -199,13 +200,13 @@ fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
     let oracle = Pubkey::find_program_address(
         &[b"oracle", paycheck.whirlpool.as_ref()],
         &whirlpools_state::ID,
-    ).0;
+    )
+    .0;
 
-    let treasury_token_account_address = get_associated_token_address(
-        &paycheck.creator,
-        &input_mint);
+    let treasury_token_account_address =
+        get_associated_token_address(&paycheck.creator, &input_mint);
 
-    let treasury_token_account=  client.get_account(&treasury_token_account_address);
+    let treasury_token_account = client.get_account(&treasury_token_account_address);
 
     match treasury_token_account {
         Ok(_) => {
@@ -245,7 +246,9 @@ fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
         tick_array_1,
         tick_array_2,
         oracle,
-        paycheck.a_to_b).unwrap();
+        paycheck.a_to_b,
+    )
+    .unwrap();
 
     let recent_blockhash = client.get_latest_blockhash().unwrap();
     let ix = solana_sdk::transaction::Transaction::new_signed_with_payer(

@@ -1,8 +1,8 @@
-use crate::consts::{MEMO_PROGRAM_ID,SWAP_DISCRIMINATOR};
+use crate::consts::{MEMO_PROGRAM_ID, SWAP_DISCRIMINATOR};
 use crate::error::PaycheckProgramError;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
-use crate::{paycheck_seeds,paycheck_seeds_with_bump, ID};
+use crate::{paycheck_seeds, paycheck_seeds_with_bump, ID};
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_macros::assert_derivation_with_bump;
 use solana_program::account_info::{next_account_info, AccountInfo};
@@ -199,7 +199,7 @@ pub fn process_execute_paycheck(
             paycheck_data.creator,
             paycheck_data.a_to_b,
             paycheck_data.bump
-        )]
+        )],
     )?;
 
     let transfer_ix = spl_token::instruction::transfer(
@@ -223,7 +223,7 @@ pub fn process_execute_paycheck(
             paycheck_data.creator,
             paycheck_data.a_to_b,
             paycheck_data.bump
-        )]
+        )],
     )?;
 
     // Close the temp token account
@@ -270,15 +270,7 @@ pub fn execute_paycheck_ix(
     oracle: Pubkey,
     a_to_b: bool,
 ) -> Result<Instruction, PaycheckProgramError> {
-    let paycheck = Pubkey::find_program_address(
-        paycheck_seeds!(
-            whirlpool,
-            creator,
-            a_to_b
-        ),
-        &ID,
-    )
-    .0;
+    let paycheck = Pubkey::find_program_address(paycheck_seeds!(whirlpool, creator, a_to_b), &ID).0;
 
     let data = borsh::to_vec(&PaycheckInstructions::ExecutePaycheck(
         ExecutePaycheckArgs { creator, a_to_b },

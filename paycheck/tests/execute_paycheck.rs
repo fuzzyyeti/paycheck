@@ -2,6 +2,7 @@ mod setup;
 mod utils;
 
 use crate::setup::{setup_program, BSOL_MINT, USDC_MINT, WHIRLPOOL_ADDRESS};
+use crate::utils::check_balance;
 use borsh::BorshDeserialize;
 use paycheck::instructions::execute_paycheck_ix;
 use paycheck::state::Paycheck;
@@ -17,19 +18,12 @@ use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
 use spl_token::state::AccountState;
 use whirlpools_state::TOKEN_PROGRAM_ID;
-use crate::utils::check_balance;
 
 #[tokio::test]
 async fn test_execute_paycheck() {
     let creator = Pubkey::new_unique();
-    let (paycheck_address, bump) = Pubkey::find_program_address(
-        paycheck_seeds!(
-            WHIRLPOOL_ADDRESS,
-            creator,
-            true
-        ),
-        &ID,
-    );
+    let (paycheck_address, bump) =
+        Pubkey::find_program_address(paycheck_seeds!(WHIRLPOOL_ADDRESS, creator, true), &ID);
     let receiver = Pubkey::new_unique();
     let (mut banks_client, payer, recent_blockhash, owner) = setup_program(|p, owner| {
         let receiver_ata = get_associated_token_address(&receiver, &USDC_MINT);
@@ -212,14 +206,8 @@ async fn test_execute_paycheck() {
 async fn test_execute_paycheck_reverse() {
     let receiver = Pubkey::new_unique();
     let (mut banks_client, payer, recent_blockhash, owner) = setup_program(|p, owner| {
-        let (paycheck_address, bump) = Pubkey::find_program_address(
-            paycheck_seeds!(
-                WHIRLPOOL_ADDRESS,
-                owner,
-                false
-            ),
-            &ID,
-        );
+        let (paycheck_address, bump) =
+            Pubkey::find_program_address(paycheck_seeds!(WHIRLPOOL_ADDRESS, owner, false), &ID);
 
         let receiver_ata = get_associated_token_address(&receiver, &BSOL_MINT);
         let paycheck = Paycheck {

@@ -2,13 +2,13 @@ mod setup;
 mod utils;
 
 use crate::setup::{setup_program, PROGRAM_ID, WHIRLPOOL_ADDRESS};
+use paycheck::paycheck_seeds;
 use paycheck::state::Paycheck;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::tokio;
 use solana_sdk::account::Account;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
-use paycheck::paycheck_seeds;
 
 #[tokio::test]
 async fn test_create_paycheck() {
@@ -40,9 +40,10 @@ async fn test_create_paycheck() {
                 data,
             },
         );
-    }).await;
+    })
+    .await;
 
-    let (paycheck_address, bump) = Pubkey::find_program_address(
+    let (paycheck_address, _) = Pubkey::find_program_address(
         paycheck_seeds!(WHIRLPOOL_ADDRESS, owner.pubkey(), true),
         &PROGRAM_ID,
     );

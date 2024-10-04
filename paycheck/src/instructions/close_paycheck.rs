@@ -1,3 +1,4 @@
+use crate::paycheck_seeds_with_bump;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
 use borsh::BorshDeserialize;
@@ -7,8 +8,7 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use solana_program::{system_program};
-use crate::paycheck_seeds_with_bump;
+use solana_program::system_program;
 
 pub fn process_close_paycheck(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
@@ -24,7 +24,7 @@ pub fn process_close_paycheck(program_id: &Pubkey, accounts: &[AccountInfo]) -> 
             paycheck_data.a_to_b,
             paycheck_data.bump
         ),
-        ProgramError::InvalidSeeds
+        ProgramError::InvalidSeeds,
     )?;
     assert_signer(creator)?;
     let paycheck_data = Paycheck::try_from_slice(&paycheck.data.borrow())?;

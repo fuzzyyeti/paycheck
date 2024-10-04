@@ -3,12 +3,12 @@ mod setup;
 use crate::setup::setup_program;
 use borsh::BorshDeserialize;
 use paycheck::instructions::CreatePaycheckArgs;
+use paycheck::paycheck_seeds;
 use paycheck::state::Paycheck;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::tokio;
 use solana_sdk::signature::Signer;
 use solana_sdk::transaction::Transaction;
-use paycheck::paycheck_seeds;
 
 #[tokio::test]
 async fn test_create_paycheck() {
@@ -42,11 +42,7 @@ async fn test_create_paycheck() {
             println!("Transaction processed successfully");
 
             let (paycheck_pda, _) = Pubkey::find_program_address(
-                paycheck_seeds!(
-                    args.whirlpool,
-                    payer.pubkey(),
-                    args.a_to_b
-                ),
+                paycheck_seeds!(args.whirlpool, payer.pubkey(), args.a_to_b),
                 &program_id,
             );
 
