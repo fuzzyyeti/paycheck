@@ -1,6 +1,5 @@
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
-use crate::consts::PAYCHECK_SEED;
 use borsh::BorshDeserialize;
 use mpl_macros::{assert_derivation_with_bump, assert_signer};
 use solana_program::account_info::{next_account_info, AccountInfo};

@@ -1,4 +1,4 @@
-use crate::consts::{MEMO_PROGRAM_ID, PAYCHECK_SEED,SWAP_DISCRIMINATOR};
+use crate::consts::{MEMO_PROGRAM_ID,SWAP_DISCRIMINATOR};
 use crate::error::PaycheckProgramError;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;

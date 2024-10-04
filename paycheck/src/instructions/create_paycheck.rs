@@ -1,5 +1,4 @@
 use crate::error::PaycheckProgramError;
-use crate::consts::PAYCHECK_SEED;
 use crate::processor::PaycheckInstructions;
 use crate::state::Paycheck;
 use crate::{paycheck_seeds, paycheck_seeds_with_bump, ID};
@@ -35,15 +34,6 @@ pub fn process_create_paycheck(
     let paycheck_account = next_account_info(account_info_iter)?;
 
     assert_signer(creator)?;
-
-    let expected_paycheck_account = Pubkey::find_program_address(
-        paycheck_seeds!(
-            config_args.whirlpool,
-            *creator.key,
-           true
-        ),
-        program_id,
-    );
 
     let bump = assert_derivation(
         program_id,

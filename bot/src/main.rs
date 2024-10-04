@@ -16,7 +16,6 @@ use paycheck::state::Paycheck;
 fn main() {
     dotenv().ok();
     let rpc_ulr = std::env::var("RPC").expect("RPC must be set");
-    let creator = pubkey!("6Zg87oCJg919TC1HGkW2Y9w9RwSEhMWoJTEeecnxsZfw");
     let whirlpool_address = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
     let client = solana_client::rpc_client::RpcClient::new(rpc_ulr);
     let bot_key_file = std::env::var("BOT_KEY").expect("BOT_KEY must be set");
@@ -87,7 +86,7 @@ fn check_sufficient_balance(client: &RpcClient, owner: &Pubkey, mint: &Pubkey, p
             return false;
         }
     };
-    let ata_data = spl_token::state::Account::unpack_from_slice(&ata_account.data.as_slice()).unwrap();
+    let ata_data = spl_token::state::Account::unpack_from_slice(ata_account.data.as_slice()).unwrap();
     ata_data.amount >= amount_needed && ata_data.delegated_amount >= amount_needed
 }
 
@@ -252,7 +251,7 @@ fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
     let ix = solana_sdk::transaction::Transaction::new_signed_with_payer(
         &[execute_ix],
         Some(&bot_key.pubkey()),
-        &[&bot_key, &temp_token_account],
+        &[bot_key, &temp_token_account],
         recent_blockhash,
     );
     let signature = client.send_and_confirm_transaction(&ix).unwrap();

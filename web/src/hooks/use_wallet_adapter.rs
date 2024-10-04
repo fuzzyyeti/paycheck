@@ -39,29 +39,6 @@ pub fn use_wallet_adapter_provider() {
     });
 }
 
-pub fn use_balance() -> Resource<u64> {
-    let wallet_adapter = use_wallet_adapter();
-    use_resource(move || async move {
-        match *wallet_adapter.read() {
-            WalletAdapter::Connected { pubkey } => {
-                dioxus_logger::tracing::info!("pubkey: {}", pubkey);
-                let rpc = WasmClient::new(RPC_URL);
-                match rpc.get_balance(&pubkey).await {
-                    Ok(balance) => balance,
-                    Err(err) => {
-                        dioxus_logger::tracing::info!("err fetching balance: {}", err);
-                        0
-                    }
-                }
-            }
-            WalletAdapter::Disconnected => {
-                dioxus_logger::tracing::info!("disconnected");
-                0
-            }
-        }
-    })
-}
-
 pub fn invoke_signature(tx: Transaction, mut signal: Signal<InvokeSignatureStatus>) {
     signal.set(InvokeSignatureStatus::Waiting);
     let mut eval = eval(

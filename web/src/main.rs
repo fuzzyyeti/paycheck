@@ -6,17 +6,15 @@ use crate::hooks::use_wallet_adapter::{
     WalletAdapter,
 };
 use borsh::BorshDeserialize;
-use chrono::{NaiveDateTime, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use dioxus::prelude::*;
-use hooks::use_wallet_adapter::use_balance;
 use paycheck::paycheck_seeds;
 use paycheck::state::Paycheck;
 use solana_client_wasm::{
-    solana_sdk::{native_token::lamports_to_sol, pubkey::Pubkey, transaction::Transaction},
+    solana_sdk::{pubkey::Pubkey, transaction::Transaction},
     WasmClient,
 };
 use solana_extra_wasm::program::spl_associated_token_account::get_associated_token_address;
-use solana_extra_wasm::program::spl_associated_token_account::instruction::create_associated_token_account;
 use solana_extra_wasm::program::spl_token;
 use solana_sdk::clock::UnixTimestamp;
 use solana_sdk::pubkey;
@@ -46,21 +44,21 @@ fn App() -> Element {
             WalletAdapter::Disconnected => None,
             WalletAdapter::Connected { pubkey } => {
                 let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
-                let (paycheck_address, bump) = Pubkey::find_program_address(
+                let (paycheck_address, _) = Pubkey::find_program_address(
                     paycheck_seeds!(whirlpool, pubkey, true),
                     &paycheck::ID,
                 );
 
                 let client = WasmClient::new(RPC_URL);
                 let paycheck_account = client.get_account(&paycheck_address).await;
-                let result = match paycheck_account {
+                
+                match paycheck_account {
                     Ok(account) => {
                         let data: Paycheck = Paycheck::try_from_slice(&account.data).unwrap();
                         Some(data)
                     }
                     Err(_) => None,
-                };
-                result
+                }
             }
         }
     });
@@ -139,8 +137,7 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
                 let client = WasmClient::new(RPC_URL);
                 let paycheck_account = client.get_account(&paycheck_address).await;
                 let result = match paycheck_account {
-                    Ok(account) => {
-                        let data: Paycheck = Paycheck::try_from_slice(&account.data).unwrap();
+                    Ok(_) => {
                         let ix = paycheck::instructions::close_paycheck::create_close_paycheck_ix(
                             pubkey,
                             paycheck_address,
@@ -217,7 +214,7 @@ fn CreatePaycheck() -> Element {
     let mut selected_days = use_signal(|| 0); // Default to 1 day
     let mut amount = use_signal(|| 5.0); // Default amount
     let mut tip = use_signal(|| 0.10); //
-    let mut receiver = use_signal(|| String::new());
+    let mut receiver = use_signal(String::new);
 
     let tx = use_resource(move || async move {
         match *wallet_adapter.read() {
@@ -226,8 +223,6 @@ fn CreatePaycheck() -> Element {
                 let rpc = WasmClient::new(RPC_URL);
                 let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
                 let bsol = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
-                let usdc = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-                let receiver_wallet = pubkey!("2qztb9WG2sGGArmKitC7wwCDMwHTLSVSyqvQCQGY4da5");
                 tracing::info!("selected_days: {:?}", selected_days);
                 let increment_seconds = selected_days * 24 * 60 * 60; // Convert days to seconds
                 let amount_usdc = (amount * 1_000_000.0) as u64;
