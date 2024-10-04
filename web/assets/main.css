@@ -174,3 +174,25 @@ input[type="number"] {
     cursor: pointer;
 }
 
+.bottom-button {
+    position: absolute;
+    bottom: 80px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.bottom-text {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    color: #00ffff;
+}
+
+.twitter-button {
+    font-size: 2rem;
+    color: white;
+    text-decoration: none;
+}

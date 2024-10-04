@@ -7,6 +7,7 @@ use solana_account_decoder::UiAccountEncoding;
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcAccountInfoConfig;
 use solana_client::rpc_filter::RpcFilterType;
+use solana_sdk::program_pack::Pack;
 use solana_sdk::signature::{Keypair, Signer};
 use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
@@ -20,11 +21,8 @@ fn main() {
     let client = solana_client::rpc_client::RpcClient::new(rpc_ulr);
     let bot_key_file = std::env::var("BOT_KEY").expect("BOT_KEY must be set");
     let bot_key = solana_sdk::signature::read_keypair_file(&bot_key_file).unwrap();
-    println!("{:?}", bot_key.pubkey());
-
 
     let binary_wp_address = whirlpool_address.to_bytes().to_vec();
-    println!("bin length {:?}", binary_wp_address.len());
     let paycheck_addresses = match client.get_program_accounts_with_config(
         &paycheck::ID,
         solana_client::rpc_config::RpcProgramAccountsConfig {
@@ -79,22 +77,38 @@ fn main() {
 
 }
 
+fn check_sufficient_balance(client: &RpcClient, owner: &Pubkey, mint: &Pubkey, paycheck: &Paycheck) -> bool {
+    let amount_needed = paycheck.amount + paycheck.tip;
+    let ata_address = get_associated_token_address(owner, mint);
+    let ata_account = match client.get_account(&ata_address) {
+        Ok(account) => account,
+        Err(_) => {
+            println!("ATA not found");
+            return false;
+        }
+    };
+    let ata_data = spl_token::state::Account::unpack_from_slice(&ata_account.data.as_slice()).unwrap();
+    ata_data.amount >= amount_needed && ata_data.delegated_amount >= amount_needed
+}
+
 fn execute_paycheck(paycheck: Paycheck, client: &RpcClient, bot_key: &Keypair) {
     let whirlpool_account = client.get_account(&paycheck.whirlpool).unwrap();
     let whirlpool = whirlpools_state::Whirlpool::try_from_slice(
         whirlpool_account.data.as_slice()
     ).unwrap();
-    let index_spacing = (whirlpool.tick_spacing as i32) * 88;
-    let start_tick_index =
-        whirlpool.tick_current_index - (whirlpool.tick_current_index % index_spacing);
-    let calc_next_index = |a: i32, b: i32| if paycheck.a_to_b { a - b } else { a + b };
     let (input_mint, output_mint) = if paycheck.a_to_b {
         (whirlpool.token_mint_a, whirlpool.token_mint_b)
     } else {
         (whirlpool.token_mint_b, whirlpool.token_mint_a)
     };
-    println!("{:?}", input_mint);
-    println!("{:?}", output_mint);
+    if !check_sufficient_balance(client, &paycheck.creator, &input_mint, &paycheck) {
+        println!("Insufficient balance");
+        return;
+    }
+    let index_spacing = (whirlpool.tick_spacing as i32) * 88;
+    let start_tick_index =
+        whirlpool.tick_current_index - (whirlpool.tick_current_index % index_spacing);
+    let calc_next_index = |a: i32, b: i32| if paycheck.a_to_b { a - b } else { a + b };
 
     let tick_array_0 = Pubkey::find_program_address(
         &[

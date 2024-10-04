@@ -87,6 +87,19 @@ fn App() -> Element {
                     }
                 }
             }
+            div {
+                class: "bottom-button",
+                a {
+                    href: "https://twitter.com",
+                    target: "_blank",
+                    class: "twitter-button",
+                    i { class: "fab fa-x-twitter" } // Update the icon class if Font Awesome has an "X" icon
+                }
+            }
+            div {
+                class: "bottom-text",
+                p { "© fuzzy yeti 2024" }
+            }
         }
     }
 }
@@ -201,7 +214,7 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
 fn CreatePaycheck() -> Element {
     let status = use_signal(|| InvokeSignatureStatus::Start);
     let wallet_adapter = use_wallet_adapter();
-    let mut selected_days = use_signal(|| 1); // Default to 1 day
+    let mut selected_days = use_signal(|| 0); // Default to 1 day
     let mut amount = use_signal(|| 5.0); // Default amount
     let mut tip = use_signal(|| 0.10); //
     let mut receiver = use_signal(|| String::new());
@@ -215,13 +228,34 @@ fn CreatePaycheck() -> Element {
                 let bsol = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
                 let usdc = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
                 let receiver_wallet = pubkey!("2qztb9WG2sGGArmKitC7wwCDMwHTLSVSyqvQCQGY4da5");
+                tracing::info!("selected_days: {:?}", selected_days);
                 let increment_seconds = selected_days * 24 * 60 * 60; // Convert days to seconds
                 let amount_usdc = (amount * 1_000_000.0) as u64;
                 let tip_usdc = (tip * 1_000_000.0) as u64;
 
                 let receiver_pubkey = Pubkey::from_str(&receiver.read()).unwrap_or(pubkey);
+                let source_wallet = get_associated_token_address(&pubkey, &bsol);
+                let paycheck = Pubkey::find_program_address(
+                    paycheck_seeds!(whirlpool, pubkey, true),
+                    &paycheck::ID,
+                ).0;
 
-                let ix = paycheck::instructions::create_paycheck::create_paycheck_ix(
+                let delegate_ix = match spl_token::instruction::approve(
+                    &spl_token::ID,
+                    &source_wallet,
+                    &paycheck,
+                    &pubkey,
+                    &[],
+                    u64::MAX,
+                ) {
+                    Ok(ix) => ix,
+                    Err(err) => {
+                        dioxus_logger::tracing::error!("Error building ix: {:?}", err);
+                        return None;
+                    }
+                };
+
+                let ix = match paycheck::instructions::create_paycheck::create_paycheck_ix(
                     pubkey,
                     paycheck::instructions::create_paycheck::CreatePaycheckArgs {
                         receiver: receiver_pubkey,
@@ -231,25 +265,23 @@ fn CreatePaycheck() -> Element {
                         tip: tip_usdc,
                         a_to_b: true,
                     },
-                );
-                match ix {
-                    Ok(ix) => {
-                        let mut tx = Transaction::new_with_payer(&[ix], Some(&pubkey));
-                        let latest_blockhash = match rpc.get_latest_blockhash().await {
-                            Ok(blockhash) => blockhash,
-                            Err(err) => {
-                                dioxus_logger::tracing::error!("Error getting latest blockhash: {:?}", err);
-                                return None;
-                            }
-                        };
-                        tx.message.recent_blockhash = latest_blockhash;
-                        Some(tx)
-                    }
+                ) {
+                    Ok(ix) => ix,
                     Err(err) => {
                         dioxus_logger::tracing::error!("Error building ix: {:?}", err);
-                        None
+                        return None;
                     }
-                }
+                };
+                let mut tx = Transaction::new_with_payer(&[delegate_ix,ix], Some(&pubkey));
+                let latest_blockhash = match rpc.get_latest_blockhash().await {
+                    Ok(blockhash) => blockhash,
+                    Err(err) => {
+                        dioxus_logger::tracing::error!("Error getting latest blockhash: {:?}", err);
+                        return None;
+                    }
+                };
+                tx.message.recent_blockhash = latest_blockhash;
+                Some(tx)
             }
         }
     });
