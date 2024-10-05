@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Paycheck - Automated swap & senddioxus-wallet-adapter</title>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="./main.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton+SC&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+
+<link rel="stylesheet" href="./main.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton+SC&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+  <div id="main"></div>
+  <script type="module">
+    import init from "/./assets/dioxus/paycheck-bot-me.js";
+    init("/./assets/dioxus/paycheck-bot-me_bg.wasm").then(wasm => {
+      if (wasm.__wbindgen_start == undefined) {
+        wasm.main();
+      }
+    });
+  </script>
+  <script src="./main.js"></script>
+
+<script src="./main.js"></script>
+<script type="module">
+    import init from "/./assets/dioxus/dioxus-wallet-adapter.js";
+    init("/./assets/dioxus/dioxus-wallet-adapter_bg.wasm").then(wasm => {
+      if (wasm.__wbindgen_start == undefined) {
+        wasm.main();
+      }
+    });
+    </script>
+    </body>
+</html>
