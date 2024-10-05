@@ -21,8 +21,24 @@ use std::str::FromStr;
 use tracing::Level;
 
 mod hooks;
+pub enum CLUSTER {
+    Devnet,
+    Mainnet,
+    Localnet,
+}
 
-pub const RPC_URL: &str = "http://127.0.0.1:8899";
+impl CLUSTER {
+    pub fn url(&self) -> &str {
+        match self {
+            CLUSTER::Devnet => "https://cool-kit-fast-devnet.helius-rpc.com",
+            CLUSTER::Mainnet => "https://api.mainnet-beta.solana.com",
+            CLUSTER::Localnet => "http://127.0.0.1:8899",
+        }
+    }
+}
+
+
+pub const RPC_URL: CLUSTER = CLUSTER::Devnet;
 
 fn main() {
     // Init logger
@@ -33,23 +49,45 @@ fn main() {
 #[derive(PartialEq, Props, Clone)]
 struct ShowPaycheckProps {
     paycheck: Paycheck,
+    whirlpool: Pubkey,
+    input_token_name: String,
+    children: Element,
+}
+
+#[derive(PartialEq, Props, Clone)]
+struct CreatePaycheckProps {
+    whirlpool: Pubkey,
+    input_mint: Pubkey,
     children: Element,
 }
 
 fn App() -> Element {
     use_wallet_adapter_provider();
     let wallet_adapter = use_wallet_adapter();
+    let (whirlpool, input_mint, input_token_name) = match RPC_URL {
+        CLUSTER::Localnet => (
+            pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP"),
+            pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1"),
+            "bSOL".to_string()),
+        CLUSTER::Mainnet => (
+            pubkey!("H6PVDFsyXkpuznHV5E8RDnhKz9izQSxP5zFkiEq2t8LP"),
+            pubkey!("oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"),
+            "ORE".to_string()),
+        CLUSTER::Devnet => (
+            pubkey!("H3xhLrSEyDFm6jjG42QezbvhSxF5YHW75VdGUnqeEg5y"),
+            pubkey!("Afn8YB1p4NsoZeS5XJBZ18LTfEy5NFPwN46wapZcBQr6"),
+            "devTMAC".to_string()),
+    };
     let info = use_resource(move || async move {
         match *wallet_adapter.read() {
             WalletAdapter::Disconnected => None,
             WalletAdapter::Connected { pubkey } => {
-                let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
                 let (paycheck_address, _) = Pubkey::find_program_address(
                     paycheck_seeds!(whirlpool, pubkey, true),
                     &paycheck::ID,
                 );
 
-                let client = WasmClient::new(RPC_URL);
+                let client = WasmClient::new(RPC_URL.url());
                 let paycheck_account = client.get_account(&paycheck_address).await;
 
                 match paycheck_account {
@@ -68,7 +106,9 @@ fn App() -> Element {
             class: "app-container",
             div {
                 class: "anton-sc-regular paycheck-title",
-                h1 { "Paycheck" }
+                h1 {
+                    "Paycheck"
+                }
             }
             div {
                 class: "top-right",
@@ -76,12 +116,21 @@ fn App() -> Element {
             }
             div {
                 class: "stacked",
+                p {
+                    class: "tagline",
+                    "Swap & send your {input_token_name} to USDC on a regular basis."
+                }
+                p {
+                    class: "tagline",
+                    "Powered by bots."
+                }
                 match info.read().as_ref() {
                     Some(Some(paycheck)) => rsx! {
-                        ShowPaychecks { paycheck: paycheck.clone() }  }
+                        ShowPaychecks { paycheck: paycheck.clone(), whirlpool, input_token_name }  }
                     ,
                     _ => rsx! {
-                        CreatePaycheck {}
+                        CreatePaycheck { whirlpool: whirlpool, input_mint: input_mint }
+                        Steps { input_token_name: input_token_name.clone() }
                     }
                 }
             }
@@ -98,6 +147,34 @@ fn App() -> Element {
                 class: "bottom-text",
                 p { "© fuzzy yeti 2024" }
             }
+        }
+    }
+}
+
+#[derive(PartialEq, Props, Clone)]
+struct StepsProps {
+    input_token_name: String,
+}
+
+fn Steps(props: StepsProps) -> Element {
+    rsx! {
+        div {
+            class: "steps-container",
+            h2 { "Steps to Send {props.input_token_name}" },
+            ul {
+                li { "Step 1: Acquire Devnet SOL and {props.input_token_name} tokens from "
+                    a {
+                        href: "https://everlastingsong.github.io/nebula/",
+                        target: "_blank",
+                        "devToken Nebula"
+                    }
+                }
+                li { "Step 2: Input the wallet address you would like to send USDC to on a regular basis in the Receiver field." },
+                li { "Step 3: Input how much USDC you want and how much USDC you are willing to tip a bot to execute your transaction." },
+                li { "Step 4: Input the increment you would like to swap & send." },
+                li { "Step 5: Execute the transaction." },
+            },
+            p { "The bots will take care of the rest!" }
         }
     }
 }
@@ -121,6 +198,8 @@ fn MountWalletAdapter() -> Element {
 
 fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
     let paycheck = props.paycheck;
+    let whirlpool = props.whirlpool;
+    let input_token_name = props.input_token_name;
     let status = use_signal(|| InvokeSignatureStatus::Start);
     let wallet_adapter = use_wallet_adapter();
 
@@ -128,13 +207,13 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
         match *wallet_adapter.read() {
             WalletAdapter::Disconnected => None,
             WalletAdapter::Connected { pubkey } => {
-                let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
+                //let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
                 let (paycheck_address, _) = Pubkey::find_program_address(
                     paycheck_seeds!(whirlpool, pubkey, true),
                     &paycheck::ID,
                 );
 
-                let client = WasmClient::new(RPC_URL);
+                let client = WasmClient::new(RPC_URL.url());
                 let paycheck_account = client.get_account(&paycheck_address).await;
                 let result = match paycheck_account {
                     Ok(_) => {
@@ -179,7 +258,7 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
         div {
             class: "paycheck-card",
             h2 { "Paycheck Active" }
-            p { "Converting your ORE to USDC and sending to"}
+            p { "Converting your {input_token_name} to USDC and sending to"}
             p { "{paycheck.receiver}" }
             p {
                 style: "margin-top: 3rem;",
@@ -211,7 +290,9 @@ fn ShowPaychecks(props: ShowPaycheckProps) -> Element {
     }
 }
 
-fn CreatePaycheck() -> Element {
+fn CreatePaycheck(props: CreatePaycheckProps) -> Element {
+    let whirlpool = props.whirlpool;
+    let input_mint = props.input_mint;
     let status = use_signal(|| InvokeSignatureStatus::Start);
     let wallet_adapter = use_wallet_adapter();
     let mut selected_days = use_signal(|| 0); // Default to 1 day
@@ -223,16 +304,14 @@ fn CreatePaycheck() -> Element {
         match *wallet_adapter.read() {
             WalletAdapter::Disconnected => None,
             WalletAdapter::Connected { pubkey } => {
-                let rpc = WasmClient::new(RPC_URL);
-                let whirlpool = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
-                let bsol = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");
+                let rpc = WasmClient::new(RPC_URL.url());
                 tracing::info!("selected_days: {:?}", selected_days);
                 let increment_seconds = selected_days * 24 * 60 * 60; // Convert days to seconds
                 let amount_usdc = (amount * 1_000_000.0) as u64;
                 let tip_usdc = (tip * 1_000_000.0) as u64;
 
                 let receiver_pubkey = Pubkey::from_str(&receiver.read()).unwrap_or(pubkey);
-                let source_wallet = get_associated_token_address(&pubkey, &bsol);
+                let source_wallet = get_associated_token_address(&pubkey, &input_mint);
                 let paycheck = Pubkey::find_program_address(
                     paycheck_seeds!(whirlpool, pubkey, true),
                     &paycheck::ID,

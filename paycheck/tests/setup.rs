@@ -5,7 +5,7 @@ use solana_program_test::{processor, BanksClient, ProgramTest};
 use solana_sdk::account::Account;
 use solana_sdk::signature::{Keypair, Signer};
 
-pub const PROGRAM_ID: Pubkey = pubkey!("54oykPNNXxpXihbuU5H6j3MZmqCxaAdHALDvVYfzwnW4");
+pub const PROGRAM_ID: Pubkey = pubkey!("5FYHsXPR2hvoXJzMe8GBhFrfggRfcgKC6mxCFo9dGMdo");
 
 pub const WHIRLPOOL_ADDRESS: Pubkey = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
 pub const BSOL_MINT: Pubkey = pubkey!("bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1");

@@ -58,7 +58,7 @@ pub fn invoke_signature(tx: Transaction, mut signal: Signal<InvokeSignatureStatu
                         let res = eval.recv().await;
                         match res {
                             Ok(serde_json::Value::String(string)) => {
-                                let rpc = WasmClient::new(RPC_URL);
+                                let rpc = WasmClient::new(RPC_URL.url());
                                 let decode_res = base64::engine::general_purpose::STANDARD
                                     .decode(string)
                                     .ok()
@@ -116,7 +116,7 @@ pub async fn confirm_signature(sig: Signature) -> Result<InvokeSignatureStatus, 
     // Confirm tx
     const CONFIRM_RETRIES: usize = 20;
     const CONFIRM_DELAY: u64 = 500;
-    let rpc = WasmClient::new(RPC_URL);
+    let rpc = WasmClient::new(RPC_URL.url());
     for _ in 0..CONFIRM_RETRIES {
         // Delay before confirming
         async_std::task::sleep(Duration::from_millis(CONFIRM_DELAY)).await;

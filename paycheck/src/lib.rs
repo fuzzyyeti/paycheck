@@ -8,4 +8,4 @@ pub mod processor;
 pub mod state;
 mod utils;
 
-declare_id!("54oykPNNXxpXihbuU5H6j3MZmqCxaAdHALDvVYfzwnW4");
+declare_id!("5FYHsXPR2hvoXJzMe8GBhFrfggRfcgKC6mxCFo9dGMdo");
