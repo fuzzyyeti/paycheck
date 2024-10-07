@@ -12,12 +12,25 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signer};
 use spl_associated_token_account::get_associated_token_address;
 use spl_associated_token_account::instruction::create_associated_token_account;
+use crate::Cluster::Devnet;
+
+enum Cluster {
+   Localnet,
+   Mainnet,
+   Devnet,
+}
+
+const cluster : Cluster = Devnet;
 
 fn main() {
     dotenv().ok();
-    let rpc_ulr = std::env::var("RPC").expect("RPC must be set");
-    let whirlpool_address = pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP");
-    let client = solana_client::rpc_client::RpcClient::new(rpc_ulr);
+    let rpc_url = std::env::var("RPC").expect("RPC must be set");
+    let whirlpool_address = match cluster {
+        Cluster::Localnet => pubkey!("HGw4exa5vdxhJHNVyyxhCc6ZwycwHQEVzpRXMDPDAmVP"),
+        Cluster::Mainnet => pubkey!("H6PVDFsyXkpuznHV5E8RDnhKz9izQSxP5zFkiEq2t8LP"),
+        Cluster::Devnet => pubkey!("H3xhLrSEyDFm6jjG42QezbvhSxF5YHW75VdGUnqeEg5y"),
+    };
+    let client = solana_client::rpc_client::RpcClient::new(rpc_url);
     let bot_key_file = std::env::var("BOT_KEY").expect("BOT_KEY must be set");
     let bot_key = solana_sdk::signature::read_keypair_file(&bot_key_file).unwrap();
 
