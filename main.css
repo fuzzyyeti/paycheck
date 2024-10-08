@@ -1,7 +1,7 @@
+/* General styles */
 body {
-    background-color:  #2e2e2e;
+    background-color: #2e2e2e;
     font-size: 20px;
-
 }
 
 h1 {
@@ -10,12 +10,13 @@ h1 {
 
 #main {
     margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 #header {
     max-width: 1200px;
 }
+
 .paycheck-container {
     display: flex;
     justify-content: flex-start;
@@ -23,6 +24,7 @@ h1 {
     height: 100vh;
     background-color: #2e2e2e;
 }
+
 .paycheck-card {
     position: relative;
     background-color: rgb(38, 41, 41);
@@ -32,21 +34,26 @@ h1 {
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     text-align: center;
     margin-top: 20px;
+    min-width: 500px;
 }
+
 .paycheck-card h2 {
     margin-bottom: 20px;
 }
+
 .paycheck-card p {
     margin: 10px 0;
 }
+
 .app-container {
     position: relative;
     height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start; /* Change this line */
+    justify-content: flex-start;
 }
+
 .top-right {
     position: absolute;
     top: 10px;
@@ -63,9 +70,6 @@ h1 {
 
 input {
     margin-top: 5px;
-}
-
-input {
     background-color: #1e1e1e;
     color: #00ffff;
     border: 1px solid #00ffff;
@@ -85,7 +89,6 @@ input[type="number"]:focus {
     outline: none;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
-
 
 button {
     background-color: #00ffff;
@@ -118,10 +121,12 @@ button:focus {
     width: 100px;
     text-align: left;
 }
+
 .interval-label {
     width: 250px;
     text-align: left;
 }
+
 .input-container {
     display: flex;
     gap: 4px;
@@ -144,6 +149,7 @@ select:focus {
     outline: none;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
+
 .paycheck-title {
     position: absolute;
     top: 1px;
@@ -152,11 +158,13 @@ select:focus {
     font-size: 28px;
     color: #00ffff;
 }
+
 .anton-sc-regular {
     font-family: "Anton SC", sans-serif;
     font-weight: 400;
     font-style: normal;
 }
+
 /* Hide default arrows in numeric inputs */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
@@ -199,6 +207,7 @@ input[type="number"] {
     color: white;
     text-decoration: none;
 }
+
 .steps-container {
     position: relative;
     background-color: rgb(38, 41, 41);
@@ -229,6 +238,7 @@ input[type="number"] {
 .steps-container p {
     margin-top: 20px;
 }
+
 a {
     color: #00cccc; /* Darker cyan */
     text-decoration: none;
@@ -243,4 +253,47 @@ a:visited {
     color: cyan;
     font-size: 12px; /* Adjust the size as needed */
     margin-bottom: 5px; /* Reduce space between paragraphs */
+}
+
+/* Media query for mobile devices */
+@media (max-width: 600px) {
+    .stacked {
+        margin-top: 60px;
+    }
+    .paycheck-container {
+        flex-direction: column;
+        padding: 10px;
+        height: auto;
+    }
+
+    .paycheck-card {
+        width: 100%;
+        box-sizing: border-box;
+        min-width: auto;
+    }
+
+    .app-container {
+        padding: 10px;
+        height: auto;
+    }
+
+    input {
+        width: 100%;
+    }
+
+    select {
+        width: 100%;
+    }
+
+    button {
+        width: 100%;
+    }
+
+    .bottom-button {
+        bottom: -15px;
+    }
+
+    .bottom-text {
+        bottom: -60px;
+    }
 }
