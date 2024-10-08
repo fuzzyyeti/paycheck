@@ -85,7 +85,7 @@ input[type="number"]::placeholder {
     opacity: 0.5;
 }
 
-input[type="number"]:focus {
+input:focus {
     outline: none;
     box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
