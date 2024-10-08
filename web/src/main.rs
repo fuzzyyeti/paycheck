@@ -137,7 +137,7 @@ fn App() -> Element {
             div {
                 class: "bottom-button",
                 a {
-                    href: "https://twitter.com",
+                    href: "https://x.com/PaycheckBotMe",
                     target: "_blank",
                     class: "twitter-button",
                     i { class: "fab fa-x-twitter" } // Update the icon class if Font Awesome has an "X" icon
